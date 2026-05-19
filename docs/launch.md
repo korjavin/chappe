@@ -27,9 +27,8 @@ audience first, then Telegram channel owners second.
 
 - Show the mascot/social preview.
 - State the agent-host use case in the first sentence.
-- Put the copy-paste install command before the first explanatory section.
-- Show one prompt a user can paste into Codex or Claude Code.
-- Show the exact `chappe onboard` command.
+- Put one copy-paste agent prompt before the first explanatory section.
+- Include install and `chappe onboard` inside that prompt.
 - Name supported hosts near the top: Codex/Claude Code/OpenCode/OpenClaw/Hermes.
 - Keep privacy visible: TDLib local state, SQLite local store, policy-gated publish.
 - Keep the README first screen under one minute to scan.

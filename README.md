@@ -9,25 +9,10 @@
 
 **Ask Codex or Claude Code to grow a Telegram channel. Chappe is the CLI they call.**
 
-Copy-paste install for a channel-tailored first run:
-
-```bash
-curl -LsSf https://raw.githubusercontent.com/crimeacs/chappe/main/scripts/install.sh | CHAPPE_CHANNEL=@nn_for_science sh
-```
-
-Then ask Codex, Claude Code, OpenCode, OpenClaw, or Hermes:
+Paste this into Codex, Claude Code, OpenCode, OpenClaw, or Hermes:
 
 ```text
-Use Chappe to analyze @nn_for_science. If Chappe is not configured, run
-chappe onboard --channel @nn_for_science, ask me only for the required
-Telegram values, then sync 100 recent posts with comments and produce a
-channel briefing.
-```
-
-The agent should call:
-
-```bash
-chappe --pretty onboard --channel @nn_for_science
+Install Chappe if needed with `curl -LsSf https://raw.githubusercontent.com/crimeacs/chappe/main/scripts/install.sh | CHAPPE_CHANNEL=@nn_for_science sh`, then run `chappe --pretty onboard --channel @nn_for_science`, follow `agent_guided_setup`, ask me only for required Telegram values, sync 100 recent posts with comments after auth is ready, and produce a channel briefing.
 ```
 
 Chappe returns `agent_guided_setup`, `setup_steps`, `agent_integrations`, and
