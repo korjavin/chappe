@@ -9,6 +9,7 @@ Eligibility:
 
 ```bash
 command -v chappe
+chappe bootstrap --channel @channel
 chappe onboard --channel @channel
 chappe doctor
 ```

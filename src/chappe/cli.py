@@ -4,13 +4,15 @@ import json
 import os
 import platform
 import shlex
+import shutil
+import sys
 from pathlib import Path
 from typing import Any, Optional
 
 import typer
 
 from . import __version__
-from .agents import available_hosts, install_agent_assets
+from .agents import agent_installation_status, available_hosts, install_agent_assets
 from .analytics import find_outliers, generate_ideas, mine_terms, rank_posts
 from .config import ChappeConfig, init_config, render_config
 from .drafts import lint_draft
@@ -306,6 +308,269 @@ def _agent_guided_setup(
     }
 
 
+def _auth_state_type(auth_state: dict[str, Any] | None) -> str | None:
+    return auth_state.get("@type") if auth_state else None
+
+
+def _store_overview(cfg: ChappeConfig, *, channel: str | None = None) -> dict[str, Any]:
+    try:
+        overview = Store(cfg.storage.sqlite_path).overview(channel=channel)
+        return {"ok": True, **overview}
+    except Exception as exc:  # pragma: no cover - diagnostic guard
+        return {"ok": False, "sqlite_path": str(cfg.storage.sqlite_path), "error": str(exc)}
+
+
+def _target_channel(cfg: ChappeConfig, channel: str | None = None) -> str:
+    return channel or cfg.defaults.default_channel or "@your_channel"
+
+
+def _channel_overview(local_context: dict[str, Any], channel: str) -> dict[str, Any] | None:
+    for item in local_context.get("channels", []):
+        if item.get("handle") == channel:
+            return item
+    return None
+
+
+def _readiness_summary(
+    cfg: ChappeConfig,
+    *,
+    local_context: dict[str, Any],
+    channel: str,
+    auth_state: dict[str, Any] | None,
+    auth_error: dict[str, Any] | None,
+) -> dict[str, Any]:
+    auth_type = _auth_state_type(auth_state)
+    channel_ctx = _channel_overview(local_context, channel) or {}
+    posts_available = int(channel_ctx.get("posts") or 0)
+    comments_available = int(channel_ctx.get("comments") or 0)
+    blockers: list[dict[str, str]] = []
+    warnings: list[dict[str, str]] = []
+
+    if not tdjson_available():
+        blockers.append({"id": "tdjson_missing", "message": "TDLib Python binding is not available."})
+    if not cfg.storage.config_path.exists():
+        blockers.append({"id": "config_missing", "message": "Run chappe setup to create a config."})
+    if not _credentials_present(cfg):
+        blockers.append(
+            {"id": "credentials_missing", "message": "Telegram api_id/api_hash are not configured."}
+        )
+    if auth_error:
+        warnings.append({"id": "auth_check_failed", "message": str(auth_error.get("message") or auth_error)})
+    if auth_state and auth_type != "authorizationStateReady":
+        blockers.append({"id": "auth_not_ready", "message": f"TDLib auth state is {auth_type}."})
+    if posts_available == 0:
+        warnings.append(
+            {
+                "id": "no_local_posts",
+                "message": f"No local posts are available for {channel}; sync before growth analysis.",
+            }
+        )
+    elif comments_available == 0:
+        warnings.append(
+            {
+                "id": "no_local_comments",
+                "message": f"No local comments are available for {channel}; comment mining will be thin.",
+            }
+        )
+
+    score = 0
+    score += 10 if cfg.storage.config_path.exists() else 0
+    score += 20 if tdjson_available() else 0
+    score += 20 if _credentials_present(cfg) else 0
+    score += 10 if _tdlib_key_present(cfg) else 0
+    score += 20 if auth_type == "authorizationStateReady" else 0
+    score += 15 if posts_available > 0 else 0
+    score += 5 if comments_available > 0 else 0
+
+    if posts_available > 0:
+        status = "ready_for_offline_analysis"
+    elif auth_type == "authorizationStateReady":
+        status = "ready_to_sync"
+    elif _credentials_present(cfg):
+        status = "needs_auth"
+    else:
+        status = "needs_setup"
+
+    return {
+        "score": score,
+        "status": status,
+        "target_channel": channel,
+        "auth_state_type": auth_type,
+        "posts_available": posts_available,
+        "comments_available": comments_available,
+        "blockers": blockers,
+        "warnings": warnings,
+    }
+
+
+def _fastest_path_to_value(
+    cfg: ChappeConfig,
+    *,
+    channel: str,
+    local_context: dict[str, Any],
+    auth_state: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    channel_arg = _channel_arg(channel)
+    channel_ctx = _channel_overview(local_context, channel) or {}
+    posts_available = int(channel_ctx.get("posts") or 0)
+    comments_available = int(channel_ctx.get("comments") or 0)
+    auth_type = _auth_state_type(auth_state)
+    steps: list[dict[str, Any]] = []
+
+    if posts_available > 0:
+        steps.append(
+            {
+                "id": "run_briefing_now",
+                "label": "Use existing local evidence immediately.",
+                "command": f"chappe briefing {channel_arg} --period 90d --budget tokens:12000",
+                "why": f"{posts_available} local posts are already available.",
+            }
+        )
+        steps.append(
+            {
+                "id": "find_top_posts",
+                "label": "Find what spreads.",
+                "command": f"chappe posts top {channel_arg} --by forwards --period 365d",
+                "why": "Forward-heavy posts are usually the fastest growth clue.",
+            }
+        )
+        if comments_available > 0:
+            steps.append(
+                {
+                    "id": "mine_comments",
+                    "label": "Mine audience demand.",
+                    "command": f"chappe comments mine {channel_arg} --period 180d",
+                    "why": f"{comments_available} local comments are available.",
+                }
+            )
+        else:
+            steps.append(
+                {
+                    "id": "add_comment_context",
+                    "label": "Sync comment threads next.",
+                    "command": f"chappe sync {channel_arg} --limit 100 --comments",
+                    "why": "Comments improve idea generation and audience research.",
+                }
+            )
+        return steps
+
+    if not cfg.storage.config_path.exists() or not _credentials_present(cfg):
+        setup = (
+            f"chappe setup --channel {channel_arg}"
+            if _credentials_present(cfg)
+            else f"chappe setup --api-id <id> --api-hash <hash> --channel {channel_arg}"
+        )
+        steps.append(
+            {
+                "id": "configure",
+                "label": "Create local Chappe config.",
+                "command": setup,
+                "why": "Chappe needs Telegram API credentials before auth or sync.",
+            }
+        )
+
+    if _credentials_present(cfg) and auth_type != "authorizationStateReady":
+        steps.append(
+            {
+                "id": "authenticate",
+                "label": "Authorize TDLib.",
+                "commands": [
+                    "chappe onboard --check-auth",
+                    "chappe auth login --phone +15551234567",
+                    "chappe auth login --code <telegram-code>",
+                    'chappe auth login --password "<2fa-password-if-needed>"',
+                ],
+                "why": "A ready TDLib session is required before live sync.",
+            }
+        )
+
+    if auth_type == "authorizationStateReady":
+        steps.append(
+            {
+                "id": "sync",
+                "label": "Pull the first useful evidence set.",
+                "command": f"chappe sync {channel_arg} --limit 100 --comments",
+                "why": "This creates enough local evidence for top posts, comments, ideas, and briefings.",
+            }
+        )
+
+    steps.append(
+        {
+            "id": "install_agent_skill",
+            "label": "Teach the current agent Chappe's workflow.",
+            "command": "chappe agent install codex",
+            "why": "Codex will then start with bootstrap/onboarding and avoid unsafe publishing.",
+        }
+    )
+    return steps
+
+
+def _bootstrap_payload(
+    cfg: ChappeConfig,
+    *,
+    channel: str | None = None,
+    check_auth: bool = False,
+) -> dict[str, Any]:
+    target = _target_channel(cfg, channel)
+    onboarding = _onboarding_payload(cfg, channel=target, check_auth=check_auth)
+    auth_state = onboarding["state"]["auth_state"]
+    auth_error = onboarding["state"]["auth_error"]
+    local_context = _store_overview(cfg, channel=target)
+    readiness = _readiness_summary(
+        cfg,
+        local_context=local_context,
+        channel=target,
+        auth_state=auth_state,
+        auth_error=auth_error,
+    )
+    install_commands = {
+        "one_line": "curl -LsSf https://raw.githubusercontent.com/crimeacs/chappe/main/scripts/install.sh | sh",
+        "uv": "uv tool install git+https://github.com/crimeacs/chappe",
+        "pipx": "pipx install git+https://github.com/crimeacs/chappe",
+    }
+    return {
+        "ok": True,
+        "product": "Chappe",
+        "mode": "bootstrap",
+        "message": "Fast-start diagnostics and fastest path to Telegram channel growth value.",
+        "target_channel": target,
+        "state": onboarding["state"],
+        "readiness": readiness,
+        "environment": {
+            "version": __version__,
+            "python": platform.python_version(),
+            "platform": platform.platform(),
+            "cwd": str(Path.cwd()),
+            "chappe_executable": shutil.which("chappe") or sys.argv[0],
+            "config_path": str(cfg.storage.config_path),
+            "data_dir": str(cfg.storage.data_dir),
+            "state_dir": str(cfg.storage.state_dir),
+            "tdlib_dir": str(cfg.storage.tdlib_dir),
+            "sqlite_path": str(cfg.storage.sqlite_path),
+        },
+        "telegram": {
+            "tdjson_available": tdjson_available(),
+            "credentials_present": _credentials_present(cfg),
+            "tdlib_key_present": _tdlib_key_present(cfg),
+            "auth_checked": check_auth,
+            "auth_state": auth_state,
+            "auth_error": auth_error,
+        },
+        "local_context": local_context,
+        "agent_integrations": agent_installation_status(),
+        "fastest_path_to_value": _fastest_path_to_value(
+            cfg,
+            channel=target,
+            local_context=local_context,
+            auth_state=auth_state,
+        ),
+        "setup_steps": onboarding["setup_steps"],
+        "agent_guided_setup": onboarding["agent_guided_setup"],
+        "install_commands": install_commands,
+        "next_command": f"chappe bootstrap --channel {_channel_arg(target)} --check-auth",
+    }
+
+
 def _onboarding_payload(
     cfg: ChappeConfig,
     *,
@@ -368,8 +633,20 @@ def main(
     cfg.ensure_dirs()
     ctx.obj = {"config": cfg, "pretty": pretty}
     if ctx.invoked_subcommand is None:
-        emit(_onboarding_payload(cfg), pretty=pretty)
+        emit(_bootstrap_payload(cfg), pretty=pretty)
         raise typer.Exit(0)
+
+
+@app.command()
+def bootstrap(
+    ctx: typer.Context,
+    channel_arg: Optional[str] = typer.Argument(None, help="Optional channel handle."),
+    channel: Optional[str] = typer.Option(None, "--channel", help="Channel to optimize first value for."),
+    check_auth: bool = typer.Option(False, "--check-auth", help="Ask TDLib for live auth state."),
+) -> None:
+    """Collect first-run diagnostics and fastest path to value."""
+
+    _emit(ctx, _bootstrap_payload(_config(ctx), channel=channel or channel_arg, check_auth=check_auth))
 
 
 @app.command()

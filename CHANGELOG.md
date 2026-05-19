@@ -10,6 +10,8 @@ tagged release is cut.
 
 - Created standalone Chappe package and CLI.
 - Added TDLib-backed auth flow with guided first-run onboarding.
+- Added bootstrap diagnostics as the default first-run experience.
+- Added one-command GitHub installer script.
 - Added local SQLite analytics store for channels, posts, comments, drafts,
   policies, and audit events.
 - Added channel sync, stats, graphs, post ranking, outlier detection, comment

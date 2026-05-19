@@ -219,6 +219,82 @@ class Store:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def overview(self, channel: str | None = None) -> dict[str, Any]:
+        with self.connect() as conn:
+            totals = {
+                table: conn.execute(f"SELECT COUNT(*) AS count FROM {table}").fetchone()["count"]
+                for table in [
+                    "channels",
+                    "posts",
+                    "comments",
+                    "drafts",
+                    "automation_policies",
+                    "audit_events",
+                ]
+            }
+            handles: set[str] = set()
+            if channel:
+                handles.add(channel)
+            for table in ["channels", "posts", "comments", "drafts", "automation_policies"]:
+                column = "handle" if table == "channels" else "channel"
+                rows = conn.execute(f"SELECT DISTINCT {column} AS handle FROM {table}").fetchall()
+                handles.update(row["handle"] for row in rows if row["handle"])
+
+            channels: list[dict[str, Any]] = []
+            for handle in sorted(handles):
+                channel_row = conn.execute(
+                    "SELECT handle, chat_id, title, username, updated_at FROM channels WHERE handle=?",
+                    (handle,),
+                ).fetchone()
+                top_post = conn.execute(
+                    """
+                    SELECT id, date, text, views, forwards, replies, reactions, link
+                    FROM posts
+                    WHERE channel=?
+                    ORDER BY (forwards * 5 + replies * 3 + reactions * 2 + views / 100) DESC
+                    LIMIT 1
+                    """,
+                    (handle,),
+                ).fetchone()
+                policy_row = conn.execute(
+                    "SELECT enabled, source_path, updated_at FROM automation_policies WHERE channel=?",
+                    (handle,),
+                ).fetchone()
+                channels.append(
+                    {
+                        "handle": handle,
+                        "known": channel_row is not None,
+                        "title": channel_row["title"] if channel_row else None,
+                        "username": channel_row["username"] if channel_row else handle.lstrip("@"),
+                        "updated_at": channel_row["updated_at"] if channel_row else None,
+                        "posts": conn.execute(
+                            "SELECT COUNT(*) AS count FROM posts WHERE channel=?",
+                            (handle,),
+                        ).fetchone()["count"],
+                        "comments": conn.execute(
+                            "SELECT COUNT(*) AS count FROM comments WHERE channel=?",
+                            (handle,),
+                        ).fetchone()["count"],
+                        "drafts": conn.execute(
+                            "SELECT COUNT(*) AS count FROM drafts WHERE channel=?",
+                            (handle,),
+                        ).fetchone()["count"],
+                        "last_post_date": conn.execute(
+                            "SELECT MAX(date) AS last_post_date FROM posts WHERE channel=?",
+                            (handle,),
+                        ).fetchone()["last_post_date"],
+                        "policy_enabled": bool(policy_row["enabled"]) if policy_row else False,
+                        "policy_source": policy_row["source_path"] if policy_row else None,
+                        "top_post": dict(top_post) if top_post else None,
+                    }
+                )
+
+        return {
+            "sqlite_path": str(self.path),
+            "totals": totals,
+            "channels": channels,
+        }
+
     def create_draft(self, channel: str, text: str) -> dict[str, Any]:
         digest = hashlib.sha256(f"{channel}\0{text}\0{now_iso()}".encode()).hexdigest()[:12]
         draft_id = f"draft_{digest}"

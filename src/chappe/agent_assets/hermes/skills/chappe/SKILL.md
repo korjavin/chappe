@@ -5,7 +5,7 @@ description: Use Chappe for Telegram channel growth intelligence, research, draf
 
 # Chappe
 
-Run `chappe onboard --channel @channel` and `chappe doctor` before use. For strategy work, call:
+Run `chappe bootstrap --channel @channel`, `chappe onboard --channel @channel`, and `chappe doctor` before use. For strategy work, call:
 
 ```bash
 chappe briefing @channel --period 90d --budget tokens:12000

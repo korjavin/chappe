@@ -48,6 +48,22 @@ python -m pip install -e ".[dev]"
 chappe doctor
 ```
 
+One-command install from GitHub:
+
+```bash
+curl -LsSf https://raw.githubusercontent.com/crimeacs/chappe/main/scripts/install.sh | sh
+```
+
+One-command install and channel-tailored bootstrap:
+
+```bash
+curl -LsSf https://raw.githubusercontent.com/crimeacs/chappe/main/scripts/install.sh | CHAPPE_CHANNEL=@nn_for_science sh
+```
+
+The installer uses `uv tool install git+https://github.com/crimeacs/chappe` when
+`uv` is available, falls back to `pipx`, then falls back to a private venv under
+`~/.local/share/chappe/tool`.
+
 Future public install after PyPI release:
 
 ```bash
@@ -57,15 +73,20 @@ pipx install chappe
 
 ## First Run
 
-Start with the guided onboarding output:
+Start with bootstrap. It gathers as much safe local context as possible and
+returns the fastest path to value:
 
 ```bash
-chappe --pretty onboard --channel @nn_for_science
+chappe --pretty bootstrap @nn_for_science
 ```
 
 The response includes:
 
 - `state`: config, TDLib, credential, and auth readiness
+- `readiness`: blockers, warnings, score, and whether local evidence can be used now
+- `local_context`: local channels, post counts, comment counts, drafts, policies, and top post
+- `agent_integrations`: whether Chappe skills/commands are installed for common agent hosts
+- `fastest_path_to_value`: the next few commands most likely to produce growth insight
 - `setup_steps`: human-readable next commands
 - `agent_guided_setup`: machine-readable setup contract for Codex and similar agents
 - `credential_help`: where to get Telegram API credentials
@@ -73,6 +94,8 @@ The response includes:
 Agents should parse `agent_guided_setup`, ask for only the listed values, treat
 all `sensitive: true` fields as secrets, and avoid channel sync or analysis
 until `chappe onboard --check-auth` reports `authorizationStateReady`.
+
+`chappe` with no arguments returns the same bootstrap payload.
 
 ## Telegram Credentials
 
@@ -134,6 +157,9 @@ credentials or auth state, it should stop analysis and guide setup first.
 Health check:
 
 ```bash
+chappe bootstrap --channel @nn_for_science
+chappe bootstrap @nn_for_science
+chappe bootstrap --channel @nn_for_science --check-auth
 chappe doctor
 ```
 

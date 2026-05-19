@@ -8,6 +8,7 @@ Run:
 
 ```bash
 chappe onboard --channel ${1:-@channel}
+chappe bootstrap --channel ${1:-@channel}
 chappe doctor
 chappe briefing ${1:-@channel} --period ${2:-90d} --budget tokens:12000
 ```

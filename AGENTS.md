@@ -15,7 +15,8 @@ pytest -q
 
 - Chappe is a CLI-first project, not MCP-first.
 - Agents and humans must use the public `chappe` CLI, not private Python APIs.
-- First-run setup must remain guided through `chappe onboard` and `agent_guided_setup`.
+- First-run setup must remain guided through `chappe bootstrap`, `chappe onboard`,
+  and `agent_guided_setup`.
 - JSON output is the stable interface. Diagnostics and failures should go to stderr.
 - Publishing must require explicit user intent, `--commit`, and an enabled local policy.
 - Every successful mutation should write an audit event.

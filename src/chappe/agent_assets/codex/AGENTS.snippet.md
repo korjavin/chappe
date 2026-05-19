@@ -3,6 +3,7 @@
 Use `chappe` for Telegram channel growth intelligence and safe publishing.
 
 - First run `chappe onboard --channel @channel` and follow `setup_steps`.
+- Prefer `chappe bootstrap --channel @channel` for first-run diagnostics and fastest path to value.
 - If onboarding returns `agent_guided_setup`, ask for the listed inputs and treat `sensitive` fields as secrets.
 - Prefer `chappe setup --channel @channel` when `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` are already exported.
 - Start with `chappe doctor`.

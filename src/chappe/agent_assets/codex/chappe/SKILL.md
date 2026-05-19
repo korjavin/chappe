@@ -9,6 +9,7 @@ Use `chappe` for Telegram channel growth work. It is a CLI, not an MCP server.
 
 Core rules:
 
+- Start with `chappe bootstrap --channel <channel>` to gather readiness, local evidence, and fastest path to value.
 - Start with `chappe onboard --channel <channel>` and follow its `setup_steps`.
 - If onboarding returns `agent_guided_setup`, use it as the setup contract: ask for the listed user inputs, respect `sensitive` fields, and run only the listed next command.
 - If `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` are already exported, prefer `chappe setup --channel <channel>` instead of putting credentials in the visible command line.

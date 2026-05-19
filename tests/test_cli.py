@@ -2,6 +2,7 @@ from typer.testing import CliRunner
 
 from chappe.cli import app
 from chappe.config import ChappeConfig
+from chappe.store import Store
 
 
 runner = CliRunner()
@@ -17,12 +18,53 @@ def test_doctor_smoke(tmp_path):
 def test_no_args_shows_onboarding(tmp_path):
     result = runner.invoke(app, [], env={"CHAPPE_HOME": str(tmp_path)})
     assert result.exit_code == 0
+    assert '"mode": "bootstrap"' in result.stdout
+    assert '"fastest_path_to_value":' in result.stdout
+    assert '"local_context":' in result.stdout
     assert '"setup_steps":' in result.stdout
     assert '"agent_guided_setup":' in result.stdout
     assert '"id": "telegram_api_id"' in result.stdout
     assert '"id": "telegram_phone"' in result.stdout
     assert "chappe setup --api-id" in result.stdout
     assert "my.telegram.org/apps" in result.stdout
+
+
+def test_bootstrap_reports_existing_local_evidence(tmp_path):
+    store_path = tmp_path / ".local" / "share" / "chappe" / "chappe.db"
+
+    Store(store_path).upsert_posts(
+        "@nn_for_science",
+        [
+            {
+                "id": "1",
+                "date": "2026-01-01T00:00:00+00:00",
+                "text": "AI agents and Telegram growth",
+                "views": 1000,
+                "forwards": 20,
+                "replies": 5,
+                "reactions": 30,
+            }
+        ],
+    )
+    result = runner.invoke(
+        app,
+        ["bootstrap", "--channel", "@nn_for_science"],
+        env={"CHAPPE_HOME": str(tmp_path)},
+    )
+    assert result.exit_code == 0
+    assert '"status": "ready_for_offline_analysis"' in result.stdout
+    assert '"id": "run_briefing_now"' in result.stdout
+    assert "chappe briefing @nn_for_science" in result.stdout
+
+
+def test_bootstrap_accepts_channel_argument(tmp_path):
+    result = runner.invoke(
+        app,
+        ["bootstrap", "@nn_for_science"],
+        env={"CHAPPE_HOME": str(tmp_path)},
+    )
+    assert result.exit_code == 0
+    assert '"target_channel": "@nn_for_science"' in result.stdout
 
 
 def test_onboard_channel_tails_setup_command(tmp_path):

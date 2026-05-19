@@ -31,6 +31,21 @@ def available_hosts() -> list[str]:
     return sorted(HOST_TARGETS)
 
 
+def agent_installation_status(*, home: Path | None = None) -> list[dict[str, object]]:
+    root = Path(home).expanduser() if home else Path.home()
+    statuses = []
+    for host in available_hosts():
+        target = root / HOST_TARGETS[host]
+        statuses.append(
+            {
+                "host": host,
+                "target": str(target),
+                "installed": target.exists() and any(target.iterdir()),
+            }
+        )
+    return statuses
+
+
 def install_agent_assets(host: str, *, dest: Path | None = None, force: bool = False) -> Path:
     if host not in HOST_TARGETS:
         raise ChappeError(
