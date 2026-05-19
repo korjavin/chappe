@@ -1,7 +1,8 @@
 # Chappe Agent Guide
 
-Chappe is an agent-native Telegram channel growth CLI. Agents working in this
-repo should preserve the public CLI contract and avoid private Telegram state.
+Chappe is a Telegram channel CLI for humans and coding agents. Agents working
+in this repo should preserve the public CLI contract and avoid private Telegram
+state.
 
 ## Development Commands
 
@@ -28,8 +29,8 @@ pytest -q
 - Do not print Telegram API hashes, phone numbers, login codes, or 2FA passwords
   in prose.
 - Do not run channel sync or analysis until auth is `authorizationStateReady`.
-- Do not add LLM-provider calls to v1; Chappe prepares agent-ready evidence but
-  does not call model APIs itself.
+- Do not add LLM-provider calls to v1; Chappe prepares local evidence for
+  agents but does not call model APIs itself.
 
 ## Public Repo Scope
 

@@ -31,7 +31,7 @@ from .tdlib import (
 app = typer.Typer(
     no_args_is_help=False,
     invoke_without_command=True,
-    help="Chappe: Telegram channel growth CLI.",
+    help="Chappe: Telegram channel analytics and publishing CLI.",
 )
 auth_app = typer.Typer(no_args_is_help=True, help="Authenticate with Telegram through TDLib.")
 config_app = typer.Typer(no_args_is_help=True, help="Manage Chappe config.")
@@ -165,7 +165,7 @@ def _setup_steps(cfg: ChappeConfig, *, channel: str | None = None) -> list[dict[
                     f"chappe comments mine {target_arg}",
                     f"chappe ideas {target_arg} --count 20",
                 ],
-                "why": "Produces agent-ready growth evidence and content opportunities.",
+                "why": "Returns channel data; top posts; comments; draft ideas for agents.",
             },
         ]
     )
@@ -292,7 +292,7 @@ def _agent_guided_setup(
 
     return {
         "host": "codex",
-        "purpose": "Guide first-run Chappe setup without guessing credentials or attempting analysis too early.",
+        "purpose": "Guide first-run Chappe setup without guessing credentials or starting analysis too early.",
         "ask_user_for": ask_user_for,
         "commands_after_user_input": commands,
         "privacy_rules": [
@@ -301,7 +301,7 @@ def _agent_guided_setup(
             "If credentials are already exported as TELEGRAM_API_ID and TELEGRAM_API_HASH, prefer `chappe setup --channel <channel>`.",
         ],
         "codex_prompt": (
-            "I can guide Chappe setup. Please provide the Telegram API ID and API hash "
+            "I can set up Chappe. Please provide the Telegram API ID and API hash "
             "from https://my.telegram.org/apps plus the phone number for Telegram login, "
             "or export TELEGRAM_API_ID and TELEGRAM_API_HASH locally and tell me to continue."
         ),
@@ -362,7 +362,7 @@ def _readiness_summary(
         warnings.append(
             {
                 "id": "no_local_posts",
-                "message": f"No local posts are available for {channel}; sync before growth analysis.",
+                "message": f"No local posts found for {channel}; sync before reports.",
             }
         )
     elif comments_available == 0:
@@ -421,7 +421,7 @@ def _fastest_path_to_value(
         steps.append(
             {
                 "id": "run_briefing_now",
-                "label": "Use existing local evidence immediately.",
+                "label": "Run a report from local data.",
                 "command": f"chappe briefing {channel_arg} --period 90d --budget tokens:12000",
                 "why": f"{posts_available} local posts are already available.",
             }
@@ -429,16 +429,16 @@ def _fastest_path_to_value(
         steps.append(
             {
                 "id": "find_top_posts",
-                "label": "Find what spreads.",
+                "label": "Rank forwarded posts.",
                 "command": f"chappe posts top {channel_arg} --by forwards --period 365d",
-                "why": "Forward-heavy posts are usually the fastest growth clue.",
+                "why": "Forward counts show which posts traveled outside the channel.",
             }
         )
         if comments_available > 0:
             steps.append(
                 {
                     "id": "mine_comments",
-                    "label": "Mine audience demand.",
+                    "label": "List audience questions.",
                     "command": f"chappe comments mine {channel_arg} --period 180d",
                     "why": f"{comments_available} local comments are available.",
                 }
@@ -488,16 +488,16 @@ def _fastest_path_to_value(
         steps.append(
             {
                 "id": "sync",
-                "label": "Pull the first useful evidence set.",
+                "label": "Sync the first report dataset.",
                 "command": f"chappe sync {channel_arg} --limit 100 --comments",
-                "why": "This creates enough local evidence for top posts, comments, ideas, and briefings.",
+                "why": "This creates enough local evidence for reports and idea generation.",
             }
         )
 
     steps.append(
         {
             "id": "install_agent_skill",
-            "label": "Teach the current agent Chappe's workflow.",
+            "label": "Install Codex guidance for Chappe.",
             "command": "chappe agent install codex",
             "why": "Codex will then start with bootstrap/onboarding and avoid unsafe publishing.",
         }
@@ -532,7 +532,7 @@ def _bootstrap_payload(
         "ok": True,
         "product": "Chappe",
         "mode": "bootstrap",
-        "message": "Fast-start diagnostics and fastest path to Telegram channel growth value.",
+        "message": "Fast-start diagnostics and next commands for Telegram channel work.",
         "target_channel": target,
         "state": onboarding["state"],
         "readiness": readiness,
@@ -590,7 +590,7 @@ def _onboarding_payload(
         "ok": True,
         "product": "Chappe",
         "mascot": "Chappie",
-        "message": "Open-source growth intelligence for Telegram channels.",
+        "message": "Open-source Telegram channel analytics and publishing CLI.",
         "state": {
             "config_path": str(cfg.storage.config_path),
             "config_exists": cfg.storage.config_path.exists(),
@@ -641,10 +641,10 @@ def main(
 def bootstrap(
     ctx: typer.Context,
     channel_arg: Optional[str] = typer.Argument(None, help="Optional channel handle."),
-    channel: Optional[str] = typer.Option(None, "--channel", help="Channel to optimize first value for."),
+    channel: Optional[str] = typer.Option(None, "--channel", help="Channel to use for the first report."),
     check_auth: bool = typer.Option(False, "--check-auth", help="Ask TDLib for live auth state."),
 ) -> None:
-    """Collect first-run diagnostics and fastest path to value."""
+    """Collect first-run diagnostics and next commands."""
 
     _emit(ctx, _bootstrap_payload(_config(ctx), channel=channel or channel_arg, check_auth=check_auth))
 
@@ -701,7 +701,7 @@ def setup(
 
 @app.command()
 def doctor(ctx: typer.Context) -> None:
-    """Check Chappe, config, TDLib, and local store readiness."""
+    """Check config and TDLib status plus local store health."""
 
     def run():
         cfg = _config(ctx)

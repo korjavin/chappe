@@ -2,31 +2,32 @@
 
 ![Chappe social preview](assets/social-preview.png)
 
-Chappe is an Apache-2.0, agent-native Telegram channel growth CLI.
+Chappe is an Apache-2.0 CLI for Telegram channel owners and coding agents.
 
-It helps channel owners and coding agents collect evidence, understand what is
-spreading, mine audience demand, draft posts, and publish through explicit local
-safety policy. It is named after Claude Chappe, whose optical telegraph networks
-helped messages travel farther and faster.
+It collects channel data, ranks posts, mines audience questions, prepares
+drafts, and publishes only through explicit local policy. It is named after
+Claude Chappe, whose optical telegraph networks let messages travel farther and
+faster.
 
-Meet **Chappie**, the little tower keeper watching Telegram signals, recording
-what spreads, and helping channel owners grow.
+Meet **Chappie**, the tower keeper for the repo: a small lookout character for
+monitoring and delivery notes.
 
 ## What Chappe Is
 
-Chappe is built for Telegram channel owners, not for generic chat automation.
+Chappe is built for Telegram channel owners. Generic chat automation is out of
+scope for v1.
 It focuses on:
 
 - guided first-run Telegram setup for humans and agents
 - channel metadata, post history, and post performance snapshots
-- top posts, outliers, forwarding signals, replies, reactions, and views
+- top posts and outliers by forwards/replies/reactions/views
 - comment mining for audience questions and content demand
-- evidence bundles that agents can use without scraping private state
-- draft creation, linting, preview, and policy-gated publishing
-- native installable guidance for Codex, Claude Code, OpenCode, OpenClaw, and Hermes
+- local evidence bundles for agents
+- draft creation with lint checks and preview before policy-gated publish commands
+- installable guidance for Codex/Claude Code/OpenCode/OpenClaw/Hermes
 
-Chappe is not MCP-first, not a general Telegram desktop client, and not an LLM
-wrapper. Agents call the same public `chappe` CLI that humans call.
+Chappe is a CLI, not an MCP server, Telegram desktop client, or LLM wrapper.
+Agents call the same public `chappe` command that humans call.
 
 ## Status
 
@@ -73,8 +74,8 @@ pipx install chappe
 
 ## First Run
 
-Start with bootstrap. It gathers as much safe local context as possible and
-returns the fastest path to value:
+Start with bootstrap. It gathers safe local context and returns the next useful
+commands:
 
 ```bash
 chappe --pretty bootstrap @nn_for_science
@@ -82,11 +83,11 @@ chappe --pretty bootstrap @nn_for_science
 
 The response includes:
 
-- `state`: config, TDLib, credential, and auth readiness
-- `readiness`: blockers, warnings, score, and whether local evidence can be used now
-- `local_context`: local channels, post counts, comment counts, drafts, policies, and top post
+- `state`: config/TDLib/credential/auth readiness
+- `readiness`: blockers/warnings/score plus local-data status
+- `local_context`: local channel counts plus draft/policy/top-post status
 - `agent_integrations`: whether Chappe skills/commands are installed for common agent hosts
-- `fastest_path_to_value`: the next few commands most likely to produce growth insight
+- `fastest_path_to_value`: the next commands most likely to produce a report
 - `setup_steps`: human-readable next commands
 - `agent_guided_setup`: machine-readable setup contract for Codex and similar agents
 - `credential_help`: where to get Telegram API credentials
@@ -147,7 +148,7 @@ Auth states:
 1. `authorizationStateWaitPhoneNumber`: run `chappe auth login --phone ...`.
 2. `authorizationStateWaitCode`: enter the Telegram login code with `--code`.
 3. `authorizationStateWaitPassword`: enter the Telegram 2FA password with `--password`.
-4. `authorizationStateReady`: Chappe can sync, analyze, and publish for configured channels.
+4. `authorizationStateReady`: Chappe can sync and report. Publishing still requires local policy.
 
 Chappe never asks an agent to guess credentials. If an agent sees missing
 credentials or auth state, it should stop analysis and guide setup first.
@@ -226,11 +227,11 @@ Expected shell behavior:
 - stdout: parseable command result
 - stderr: diagnostics and failures
 
-The output contract is intentionally boring so agents can use it reliably.
+The output contract is plain so agents can parse it reliably.
 
 ## Automation Policy
 
-Chappe blocks autonomous publishing unless a local policy explicitly allows it.
+Chappe blocks agent publishing unless a local policy explicitly allows it.
 See [examples/chappe.yaml](examples/chappe.yaml):
 
 ```yaml
@@ -340,7 +341,7 @@ agents/                     Human-readable agent integration notes
 - hardened live TDLib sync for large channels
 - richer admin statistics and historical snapshots
 - better similar-channel discovery
-- comment-topic clustering and audience jobs-to-be-done reports
+- comment-topic clustering and audience-demand reports
 - stricter publish policy enforcement and scheduling windows
 - public PyPI release
 - deeper examples for channel growth workflows
@@ -352,4 +353,4 @@ Apache-2.0. See [LICENSE](LICENSE).
 ## Disclaimer
 
 Chappe is unofficial and is not affiliated with Telegram. Use it within
-Telegram's terms, local laws, and your channel's trust expectations.
+Telegram's terms, local law, and the trust your channel has with readers.

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "chappe"
 version = "0.1.0"
-description = "Open-source growth intelligence CLI for Telegram channels and agents."
+description = "Open-source Telegram channel CLI for analytics/research and policy-gated publishing."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }

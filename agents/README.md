@@ -11,6 +11,5 @@ chappe agent install openclaw
 chappe agent install hermes
 ```
 
-The source templates live in `src/chappe/agent_assets/` so they are included in
-PyPI builds.
-
+The source templates live in `src/chappe/agent_assets/` and ship in PyPI
+builds.

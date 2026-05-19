@@ -1,6 +1,6 @@
 ---
 name: chappe
-description: Telegram channel growth intelligence and safe publishing CLI.
+description: Telegram channel analytics/research and guarded publishing CLI.
 ---
 
 # Chappe
@@ -14,7 +14,7 @@ chappe onboard --channel @channel
 chappe doctor
 ```
 
-Use Chappe to analyze Telegram channels, mine comments, generate content ideas, and publish only when a local automation policy exists.
+Use Chappe to analyze Telegram channels, mine comments, create post ideas, and publish only when a local automation policy exists.
 
 Default workflow:
 

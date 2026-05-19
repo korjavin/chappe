@@ -15,12 +15,11 @@ def lint_draft(text: str, *, max_chars: int = 4096) -> dict[str, Any]:
         warnings.append({"code": "many_links", "message": "Draft contains more than three links."})
     if len(stripped.splitlines()[0]) > 180 if stripped else False:
         warnings.append({"code": "long_hook", "message": "First line is long for a Telegram hook."})
-    if not any(mark in stripped for mark in ["?", ":", "—", "-", "🔥", "🤖", "AI", "ИИ"]):
-        warnings.append({"code": "weak_hook_signal", "message": "Hook lacks a clear question, contrast, or signal."})
+    if not any(mark in stripped for mark in ["?", ":", "-", "AI", "ИИ"]):
+        warnings.append({"code": "weak_hook_signal", "message": "Hook lacks a clear question or contrast signal."})
     return {
         "ok": not errors,
         "errors": errors,
         "warnings": warnings,
         "stats": {"chars": len(text), "lines": len(text.splitlines()), "links": text.count("http")},
     }
-

@@ -30,8 +30,9 @@ Examples of unacceptable behavior:
 
 ## Enforcement
 
-Project maintainers may remove, edit, or reject comments, commits, code, issues,
-and other contributions that are not aligned with this Code of Conduct.
+Project maintainers may remove comments or issues. They may also reject commits,
+code changes, or other contributions that are not aligned with this Code of
+Conduct.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported privately to the repository owner through GitHub.

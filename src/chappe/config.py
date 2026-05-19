@@ -114,7 +114,7 @@ class ChappeConfig:
 
 
 DEFAULT_CONFIG = """# Chappe configuration
-# Chappe is an unofficial Telegram channel growth CLI.
+# Chappe is an unofficial Telegram channel analytics CLI.
 
 [telegram]
 api_id = "${TELEGRAM_API_ID}"
@@ -153,7 +153,7 @@ def render_config(
     key_value = database_encryption_key or secrets.token_urlsafe(32)
     channel_line = f"default_channel = {toml_string(default_channel)}\n" if default_channel else ""
     return f"""# Chappe configuration
-# Chappe is an unofficial Telegram channel growth CLI.
+# Chappe is an unofficial Telegram channel analytics CLI.
 
 [telegram]
 api_id = {toml_string(api_id_value)}

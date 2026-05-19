@@ -13,4 +13,4 @@ chappe doctor
 chappe briefing ${1:-@channel} --period ${2:-90d} --budget tokens:12000
 ```
 
-Use the JSON evidence to summarize growth signals, audience demand, top posts, and next content ideas.
+Report channel signals; audience demand; top posts; next commands from the JSON output.

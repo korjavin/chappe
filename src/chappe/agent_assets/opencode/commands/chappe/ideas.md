@@ -1,4 +1,3 @@
 RUN chappe ideas $ARGUMENTS --count 20
 
-Use the returned evidence to propose a channel content plan.
-
+Use the returned local data to propose a channel post plan.

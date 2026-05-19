@@ -1,8 +1,7 @@
 # Contributing To Chappe
 
-Thanks for helping improve Chappe. This project is early alpha, so the most
-valuable contributions are small, tested, and clear about the user workflow they
-improve.
+Thanks for working on Chappe. This project is early alpha, so useful changes
+are narrow and tested. Tie each one to a real user workflow.
 
 ## Local Setup
 
@@ -26,8 +25,8 @@ pytest -q
 - Keep behavior exposed through the `chappe` CLI.
 - Preserve compact JSON output by default.
 - Send diagnostics and failures to stderr.
-- Add or update tests for CLI output, config loading, policy validation,
-  analytics scoring, and TDLib normalization when you change those areas.
+- Add or update tests when you change CLI output, config loading, policy
+  validation, analytics scoring, or TDLib normalization.
 - Keep public docs accurate for agents and humans.
 - Do not commit local Telegram state, `.env` files, session files, fetched media,
   audit logs, or channel exports.
@@ -37,7 +36,7 @@ pytest -q
 - [ ] `ruff check .` passes.
 - [ ] `pytest -q` passes.
 - [ ] README or docs updated if behavior changed.
-- [ ] No private Telegram data, secrets, sessions, or local config files included.
+- [ ] No private Telegram data, secrets, sessions, or local config files.
 - [ ] Publishing behavior remains policy-gated and audited.
 
 ## Release Notes
