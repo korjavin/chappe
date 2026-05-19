@@ -2,8 +2,15 @@
 
 ![Chappe social preview](assets/social-preview.png)
 
-Chappe is an Apache-2.0 CLI tool surface for Telegram channel agents.
-Channel owners use it through Codex/Claude Code/OpenCode/OpenClaw/Hermes.
+[![CI](https://github.com/crimeacs/chappe/actions/workflows/ci.yml/badge.svg)](https://github.com/crimeacs/chappe/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](pyproject.toml)
+[![Agent hosts](https://img.shields.io/badge/agents-Codex%20%7C%20Claude%20Code%20%7C%20OpenCode%20%7C%20OpenClaw%20%7C%20Hermes-2f6f46.svg)](#agent-integrations)
+
+**Ask Codex or Claude Code to grow a Telegram channel. Chappe is the CLI they call.**
+
+Chappe gives agent hosts a private TDLib session; local SQLite analytics;
+policy-gated publish commands for channels such as `@nn_for_science`.
 
 The CLI collects channel data, ranks posts, mines audience questions, prepares
 drafts, and publishes only through explicit local policy. It is named after
@@ -12,6 +19,26 @@ faster.
 
 Meet **Chappie**, the tower keeper for the repo: a small lookout character for
 monitoring and delivery notes.
+
+## Try It With An Agent
+
+Ask Codex, Claude Code, OpenCode, OpenClaw, or Hermes:
+
+```text
+Use Chappe to analyze @nn_for_science. If Chappe is not configured, run
+chappe onboard --channel @nn_for_science, ask me only for the required
+Telegram values, then sync 100 recent posts with comments and produce a
+channel briefing.
+```
+
+The agent should call:
+
+```bash
+chappe --pretty onboard --channel @nn_for_science
+```
+
+Chappe returns `agent_guided_setup`, `setup_steps`, `agent_integrations`, and
+`intended_use` so the host can ask for credentials safely before it syncs data.
 
 ## What Chappe Is
 
@@ -326,6 +353,8 @@ Repository and PyPI release setup are documented in
 [docs/publication.md](docs/publication.md). The release workflow uses PyPI
 Trusted Publishing through GitHub Actions OIDC, so Chappe does not need a
 long-lived PyPI token in GitHub secrets.
+
+GitHub launch notes live in [docs/launch.md](docs/launch.md).
 
 ## Repository Layout
 
