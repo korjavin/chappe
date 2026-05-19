@@ -1,0 +1,16 @@
+channel: "@nn_for_science"
+enabled: true
+allowed_agents:
+  - codex
+  - claude-code
+  - opencode
+  - openclaw
+  - hermes
+rate_limits:
+  max_posts_per_day: 3
+draft_lint:
+  require_lint_ok: true
+  max_chars: 4096
+audit:
+  destination: "~/.local/state/chappe/audit.jsonl"
+

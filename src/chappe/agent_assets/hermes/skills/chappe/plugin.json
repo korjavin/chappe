@@ -1,0 +1,6 @@
+{
+  "name": "chappe",
+  "description": "Telegram channel growth intelligence and safe publishing through the Chappe CLI.",
+  "commands": ["chappe doctor", "chappe briefing @channel", "chappe publish draft_id --commit --actor hermes"]
+}
+

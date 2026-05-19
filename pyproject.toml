@@ -1,0 +1,79 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chappe"
+version = "0.1.0"
+description = "Open-source growth intelligence CLI for Telegram channels and agents."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Chappe contributors" }]
+keywords = ["telegram", "cli", "growth", "analytics", "agents", "tdlib"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Communications :: Chat",
+  "Topic :: Internet",
+]
+dependencies = [
+  "typer>=0.15.0",
+  "rich>=13.0",
+  "pydantic>=2.7",
+  "PyYAML>=6.0",
+  "tomli>=2.0; python_version<'3.11'",
+  "tdjson>=1.8.64.post1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2",
+  "pytest>=8.0",
+  "ruff>=0.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/crimeacs/chappe"
+Repository = "https://github.com/crimeacs/chappe"
+Issues = "https://github.com/crimeacs/chappe/issues"
+Changelog = "https://github.com/crimeacs/chappe/blob/main/CHANGELOG.md"
+
+[project.scripts]
+chappe = "chappe.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/chappe"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/tests",
+  "/agents",
+  "/assets",
+  "/docs",
+  "/examples",
+  "/.github",
+  "/AGENTS.md",
+  "/CHANGELOG.md",
+  "/CODE_OF_CONDUCT.md",
+  "/CONTRIBUTING.md",
+  "/README.md",
+  "/LICENSE",
+  "/SECURITY.md",
+  "/pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

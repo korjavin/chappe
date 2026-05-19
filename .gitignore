@@ -1,0 +1,60 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Virtual environment
+venv/
+.venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+.coverage
+htmlcov/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Telegram session files
+*.session
+*.session-journal
+tdlib/
+*.tdlib/
+
+# Chappe local state and generated reports
+.chappe/
+chappe.db
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+audit.jsonl
+reports/
+downloads/
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local prototype artifacts
+claude_desktop_config.json
+top_posts.json
+fetched_*.jpg
+dist/
+build/
+*.egg-info/

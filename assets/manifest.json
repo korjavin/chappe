@@ -1,0 +1,18 @@
+{
+  "product": "Chappe",
+  "mascot": "Chappie",
+  "role": "the little tower keeper",
+  "assets": {
+    "chappie-signal-operator.png": "child_at_lookout_waving_a_flag.png",
+    "chappie-icon.png": "chibi_explorer_with_binoculars.png",
+    "chappie-lookout.png": "child_in_lookout_tower_with_binoculars.png",
+    "chappie-recorder.png": "child_writing_in_a_wooden_lookout_tower.png",
+    "chappie-night-watch.png": "watchtower_lantern_keeper_at_night.png",
+    "chappie-scout-map-reader.png": "watchtower_adventure_with_map_in_hand.png",
+    "chappie-weather-keeper.png": "child_observing_weather_from_rain_tower.png",
+    "chappie-messenger.png": "little_scout_at_the_lookout_tower.png",
+    "social-preview.png": "chappe_meet_the_tower_keeper.png",
+    "concept-grid.png": "chappie_mascot_concept_designs.png",
+    "original-character-sheet.png": "a_clean_vector_illustration_character_sheet_gr.png"
+  }
+}
