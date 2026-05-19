@@ -8,8 +8,9 @@ Use `chappe` for Telegram channel analytics/research and guarded publishing.
 - Prefer `chappe setup --channel @channel` when `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` are already exported.
 - Start with `chappe doctor`.
 - Do not sync or analyze until `chappe onboard --check-auth` reports `authorizationStateReady`.
+- After `chappe sync`, inspect `metric_quality` and fix or explain warnings before briefing.
 - Use `chappe briefing @channel --period 90d --budget tokens:12000` for channel strategy.
 - Use `chappe posts top`, `chappe comments mine`, and `chappe ideas` for planning from local channel data.
 - Do not call `chappe publish` unless the user explicitly requested publishing and a local automation policy is enabled.
 - Every mutation must use `--commit` and a meaningful `--actor`.
-- If Chappe itself fails, a local patch can unblock the run. Move the fix into https://github.com/crimeacs/chappe and propose a PR.
+- If Chappe itself fails, a local patch can unblock the run. Move the fix into https://github.com/crimeacs/chappe, add a test, and propose a PR.

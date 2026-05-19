@@ -8,6 +8,7 @@ from base64 import b64encode
 from datetime import datetime, timezone
 from typing import Any
 
+from . import __version__
 from .config import ChappeConfig
 from .errors import ChappeError, ExitCode
 
@@ -75,13 +76,23 @@ def message_media_type(message: dict[str, Any]) -> str:
     return ctype.replace("message", "", 1).lower() or "text"
 
 
+def _reply_info(message: dict[str, Any]) -> dict[str, Any]:
+    interaction = message.get("interaction_info") or {}
+    return interaction.get("reply_info") or message.get("reply_info") or {}
+
+
 def _reaction_total(message: dict[str, Any]) -> int:
     interaction = message.get("interaction_info") or {}
     reactions = interaction.get("reactions") or message.get("reactions") or {}
     total = 0
     for reaction in reactions.get("reactions", []) or reactions.get("results", []):
-        total += int(reaction.get("total_count") or reaction.get("count") or 0)
-    return total
+        total += int(
+            reaction.get("total_count")
+            or reaction.get("count")
+            or reaction.get("reaction_count")
+            or 0
+        )
+    return int(total or interaction.get("reaction_count") or message.get("reaction_count") or 0)
 
 
 def normalize_chat(chat: dict[str, Any], handle: str | None = None) -> dict[str, Any]:
@@ -100,7 +111,7 @@ def normalize_chat(chat: dict[str, Any], handle: str | None = None) -> dict[str,
 
 def normalize_message(message: dict[str, Any], *, channel: str, username: str | None = None) -> dict[str, Any]:
     interaction = message.get("interaction_info") or {}
-    reply_info = message.get("reply_info") or {}
+    reply_info = _reply_info(message)
     post_id = str(message.get("id"))
     handle = username or channel.lstrip("@")
     return {
@@ -248,7 +259,7 @@ class TDLibGateway:
                         "system_language_code": "en",
                         "device_model": "Chappe CLI",
                         "system_version": os.uname().sysname if hasattr(os, "uname") else "unknown",
-                        "application_version": "0.1.0",
+                        "application_version": __version__,
                     }
                 )
                 state = self.send({"@type": "getAuthorizationState"})

@@ -16,10 +16,12 @@ Core rules:
 - Prefer JSON output and parse it programmatically.
 - Run `chappe doctor` before assuming Telegram auth is ready.
 - Do not run sync or analysis until `chappe onboard --check-auth` reports `authorizationStateReady`.
+- After `chappe sync`, inspect `metric_quality` and fix or explain warnings before briefing.
 - Run `chappe briefing <channel> --period 90d --budget tokens:12000` before strategy work.
+- The final briefing must include data footprint, top post ids/links/metrics, audience questions, growth experiments, draftable hooks, and data limits.
 - Never publish unless the user explicitly asks and `chappe automate enable` has installed a local policy for that channel.
 - Publishing requires `chappe publish <draft_id> --commit --actor codex`.
-- If Chappe itself fails, a local patch can unblock the run. Move the fix into https://github.com/crimeacs/chappe and propose a PR.
+- If Chappe itself fails, a local patch can unblock the run. Move the fix into https://github.com/crimeacs/chappe, add a test, and propose a PR.
 
 Useful commands:
 

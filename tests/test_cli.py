@@ -29,6 +29,8 @@ def test_no_args_shows_onboarding(tmp_path):
     assert '"local_context":' in result.stdout
     assert '"setup_steps":' in result.stdout
     assert '"agent_guided_setup":' in result.stdout
+    assert '"first_run_runbook":' in result.stdout
+    assert '"briefing_contract":' in result.stdout
     assert '"id": "telegram_api_id"' in result.stdout
     assert '"id": "telegram_phone"' in result.stdout
     assert "chappe setup --api-id" in result.stdout
@@ -108,6 +110,57 @@ def test_gateway_configures_before_return(monkeypatch, tmp_path):
 
     assert gateway.config is cfg
     assert gateway.configured
+
+
+def test_sync_metric_quality_warns_on_missing_comment_sync():
+    quality = cli._sync_metric_quality(
+        [{"interaction_info": {"reply_info": {"reply_count": 2}}}],
+        [{"id": "1", "replies": 2, "reactions": 0}],
+        comments_requested=True,
+        synced_comments=0,
+        comment_errors=[],
+    )
+
+    assert quality["posts_with_replies"] == 1
+    assert quality["comment_thread_candidates"] == 1
+    assert "Posts have replies, but no comments were synced." in quality["warnings"]
+
+
+def test_briefing_includes_data_quality_and_contract(tmp_path):
+    store_path = tmp_path / ".local" / "share" / "chappe" / "chappe.db"
+    store = Store(store_path)
+    store.upsert_posts(
+        "@nn_for_science",
+        [
+            {
+                "id": "1",
+                "date": "2026-01-01T00:00:00+00:00",
+                "text": "AI agents and Telegram growth",
+                "views": 1000,
+                "forwards": 20,
+                "replies": 2,
+                "reactions": 0,
+                "link": "https://t.me/nn_for_science/1",
+            }
+        ],
+    )
+    store.upsert_comments(
+        "@nn_for_science",
+        "1",
+        [{"id": "c1", "text": "Как это работает?", "reactions": 3}],
+    )
+
+    result = runner.invoke(
+        app,
+        ["briefing", "@nn_for_science"],
+        env={"CHAPPE_HOME": str(tmp_path)},
+    )
+
+    assert result.exit_code == 0
+    assert '"data_quality":' in result.stdout
+    assert '"agent_briefing_contract":' in result.stdout
+    assert '"comments_available": 1' in result.stdout
+    assert '"commented_posts_available": 1' in result.stdout
 
 
 def test_config_init_smoke(tmp_path):

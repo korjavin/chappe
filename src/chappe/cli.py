@@ -62,6 +62,23 @@ AGENT_HOSTS = [
     {"id": "hermes", "name": "Hermes", "aliases": ["Hermess"]},
 ]
 
+BRIEFING_REQUIRED_SECTIONS = [
+    "data footprint and metric quality",
+    "top posts with dates, ids, links, and metrics",
+    "outlier patterns by format and topic",
+    "audience questions from comments",
+    "content pillars already working",
+    "growth experiments for the next 2 weeks",
+    "draftable post hooks",
+    "risks, blind spots, and next Chappe commands",
+]
+
+BRIEFING_EVIDENCE_RULES = [
+    "Cite Chappe post ids or links for every major claim.",
+    "Separate raw Chappe output from agent interpretation.",
+    "Call out missing metrics instead of filling gaps with generic advice.",
+]
+
 
 def _ctx(ctx: typer.Context) -> dict[str, Any]:
     return ctx.obj or {}
@@ -109,6 +126,82 @@ def _credentials_present(cfg: ChappeConfig) -> bool:
 
 def _channel_arg(channel: str) -> str:
     return shlex.quote(channel)
+
+
+def _raw_reply_info(message: dict[str, Any]) -> dict[str, Any]:
+    interaction = message.get("interaction_info") or {}
+    return interaction.get("reply_info") or message.get("reply_info") or {}
+
+
+def _raw_reactions(message: dict[str, Any]) -> Any:
+    interaction = message.get("interaction_info") or {}
+    return interaction.get("reactions") or message.get("reactions")
+
+
+def _sync_metric_quality(
+    messages: list[dict[str, Any]],
+    posts: list[dict[str, Any]],
+    *,
+    comments_requested: bool,
+    synced_comments: int,
+    comment_errors: list[dict[str, Any]],
+) -> dict[str, Any]:
+    reply_payload_count = sum(1 for message in messages if _raw_reply_info(message))
+    reaction_payload_count = sum(1 for message in messages if _raw_reactions(message))
+    posts_with_replies = sum(1 for post in posts if int(post.get("replies") or 0) > 0)
+    posts_with_reactions = sum(1 for post in posts if int(post.get("reactions") or 0) > 0)
+    warnings: list[str] = []
+    notes: list[str] = []
+
+    if reply_payload_count and not posts_with_replies:
+        warnings.append("TDLib returned reply_info payloads, but Chappe normalized zero replies.")
+    if comments_requested and posts_with_replies and not synced_comments:
+        warnings.append("Posts have replies, but no comments were synced.")
+    if reaction_payload_count and not posts_with_reactions:
+        warnings.append("TDLib returned reaction payloads, but Chappe normalized zero reactions.")
+    if not reaction_payload_count:
+        notes.append("TDLib did not return post reaction payloads for this sync.")
+
+    return {
+        "posts_seen": len(posts),
+        "posts_with_reply_info_payload": reply_payload_count,
+        "posts_with_replies": posts_with_replies,
+        "posts_with_reaction_payload": reaction_payload_count,
+        "posts_with_reactions": posts_with_reactions,
+        "comments_requested": comments_requested,
+        "comment_thread_candidates": posts_with_replies,
+        "synced_comments": synced_comments,
+        "comment_error_count": len(comment_errors),
+        "warnings": warnings,
+        "notes": notes,
+    }
+
+
+def _briefing_data_quality(posts: list[dict[str, Any]], comments: list[dict[str, Any]]) -> dict[str, Any]:
+    posts_with_replies = sum(1 for post in posts if int(post.get("replies") or 0) > 0)
+    posts_with_reactions = sum(1 for post in posts if int(post.get("reactions") or 0) > 0)
+    comments_with_reactions = sum(1 for comment in comments if int(comment.get("reactions") or 0) > 0)
+    comments_by_post = len({comment.get("post_id") for comment in comments if comment.get("post_id")})
+    warnings: list[str] = []
+    notes: list[str] = []
+
+    if len(posts) < 30:
+        warnings.append("Fewer than 30 posts are available; sync more history before strategy claims.")
+    if posts_with_replies and not comments:
+        warnings.append("Posts have replies, but no comments are stored.")
+    if not posts_with_reactions:
+        notes.append("No post reactions are stored. Telegram or TDLib may not expose them for this sync.")
+
+    return {
+        "posts_available": len(posts),
+        "comments_available": len(comments),
+        "posts_with_replies": posts_with_replies,
+        "commented_posts_available": comments_by_post,
+        "posts_with_reactions": posts_with_reactions,
+        "comments_with_reactions": comments_with_reactions,
+        "warnings": warnings,
+        "notes": notes,
+    }
 
 
 def _setup_steps(cfg: ChappeConfig, *, channel: str | None = None) -> list[dict[str, Any]]:
@@ -325,11 +418,64 @@ def _agent_guided_setup(
             "Do not run sync, briefing, publishing, or analysis until auth is authorizationStateReady.",
             "If credentials are already exported as TELEGRAM_API_ID and TELEGRAM_API_HASH, prefer `chappe setup --channel <channel>`.",
         ],
+        "first_run_runbook": [
+            {
+                "id": "install_or_upgrade",
+                "goal": "Make sure the chappe command is current before asking for secrets.",
+                "commands": [
+                    "chappe --version",
+                    "chappe doctor",
+                    f"chappe onboard --channel {target_arg}",
+                ],
+            },
+            {
+                "id": "authenticate",
+                "goal": "Ask only for values listed in ask_user_for and redact sensitive values.",
+                "ready_when": "chappe onboard --check-auth reports authorizationStateReady",
+            },
+            {
+                "id": "sync_evidence",
+                "goal": "Build a local evidence store with enough posts and comments for strategy work.",
+                "command": f"chappe sync {target_arg} --limit 100 --comments",
+                "check": "Inspect metric_quality. If warnings are non-empty, fix or explain them before briefing.",
+            },
+            {
+                "id": "brief_channel",
+                "goal": "Produce an evidence-backed growth briefing for the channel owner.",
+                "commands": [
+                    f"chappe briefing {target_arg} --period 90d --budget tokens:12000",
+                    f"chappe posts top {target_arg} --by forwards --period 365d",
+                    f"chappe posts top {target_arg} --by replies --period 365d",
+                    f"chappe comments mine {target_arg} --period 180d",
+                    f"chappe ideas {target_arg} --count 20",
+                ],
+            },
+        ],
+        "live_sync_validation": {
+            "minimum_posts_for_briefing": 30,
+            "preferred_posts_for_briefing": 100,
+            "comment_rule": "When sync reports posts_with_replies > 0, comments_requested should normally produce synced_comments > 0.",
+            "metric_rule": "Use metric_quality before making claims about replies or reactions.",
+            "data_limit_rule": "If Telegram or TDLib omits a metric, say that plainly instead of guessing.",
+        },
+        "briefing_contract": {
+            "required_sections": BRIEFING_REQUIRED_SECTIONS,
+            "evidence_rules": BRIEFING_EVIDENCE_RULES,
+        },
         "contribution_rules": [
             "Local fixes are allowed when they unblock Chappe during agent work.",
             "Treat installed-package edits as scratch work.",
-            "Move the fix into https://github.com/crimeacs/chappe and propose a pull request.",
+            "Move the fix into https://github.com/crimeacs/chappe before the final answer when repo access is available.",
+            "Run lint and tests after the repo patch.",
+            "Propose a pull request or report the branch/commit that should become one.",
             "Never include local config, TDLib state, SQLite data, audit logs, credentials, or channel exports in a patch.",
+        ],
+        "bug_protocol": [
+            "Capture the failing command and the smallest non-secret symptom.",
+            "Patch an installed package only if that is the fastest way to finish the user task.",
+            "Reproduce the fix in the source repo.",
+            "Add or update a test for the failure.",
+            "Re-run the original Chappe command after the fix.",
         ],
         "codex_prompt": (
             "I can set up Chappe. Please provide the Telegram API ID and API hash "
@@ -351,7 +497,7 @@ def _intended_use() -> dict[str, Any]:
         ),
         "contribution_note": (
             "If an agent fixes Chappe during use, it should upstream the repo patch "
-            "instead of leaving only an installed-package edit."
+            "with tests instead of leaving only an installed-package edit."
         ),
     }
 
@@ -935,6 +1081,13 @@ def sync(
                     synced_comments += store.upsert_comments(channel, str(post["id"]), comment_rows)
                 except ChappeError as exc:
                     comment_errors.append({"post_id": post["id"], "error": exc.message})
+        metric_quality = _sync_metric_quality(
+            messages,
+            posts,
+            comments_requested=comments,
+            synced_comments=synced_comments,
+            comment_errors=comment_errors,
+        )
         gateway.close()
         _emit(
             ctx,
@@ -945,6 +1098,7 @@ def sync(
                 "synced_posts": count,
                 "synced_comments": synced_comments,
                 "comment_errors": comment_errors,
+                "metric_quality": metric_quality,
                 "next_from_message_id": history.get("next_from_message_id"),
             },
         )
@@ -1064,11 +1218,13 @@ def briefing(
         posts = store.list_posts(channel, limit=1000)
         comments = store.list_comments(channel, limit=1000)
         top = rank_posts(posts, by="engagement", limit=20)
+        data_quality = _briefing_data_quality(posts, comments)
         bundle = {
             "ok": True,
             "channel": channel,
             "period": period,
             "budget": budget,
+            "data_quality": data_quality,
             "summary": {
                 "posts_available": len(posts),
                 "comments_available": len(comments),
@@ -1083,6 +1239,10 @@ def briefing(
                 f"chappe comments mine {channel}",
                 f"chappe draft create {channel} --file post.md",
             ],
+            "agent_briefing_contract": {
+                "required_sections": BRIEFING_REQUIRED_SECTIONS,
+                "evidence_rules": BRIEFING_EVIDENCE_RULES,
+            },
         }
         _emit(ctx, bundle)
 

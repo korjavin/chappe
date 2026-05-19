@@ -20,11 +20,13 @@ pytest -q
   to run it.
 - First-run setup must remain guided through `chappe bootstrap`, `chappe onboard`,
   and `agent_guided_setup`.
+- First-run outputs should include a sync-quality check and an evidence-backed
+  briefing contract for agent hosts.
 - JSON output is the stable interface. Diagnostics and failures should go to stderr.
 - Publishing must require explicit user intent, `--commit`, and an enabled local policy.
 - Every successful mutation should write an audit event.
-- If an agent fixes Chappe during use, move the fix into the repo and open a PR.
-  Do not leave the only fix in an installed package.
+- If an agent fixes Chappe during use, move the fix into the repo, add a test,
+  and open a PR. Do not leave the only fix in an installed package.
 
 ## Safety Rules
 

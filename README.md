@@ -12,7 +12,7 @@
 Paste this into Codex, Claude Code, OpenCode, OpenClaw, or Hermes:
 
 ```text
-Install Chappe if needed with `curl -LsSf https://raw.githubusercontent.com/crimeacs/chappe/main/scripts/install.sh | CHAPPE_CHANNEL=@your_channel sh`, then run `chappe --pretty onboard --channel @your_channel`, follow `agent_guided_setup`, ask me only for required Telegram values, sync 100 recent posts with comments after auth is ready, and produce a channel briefing. Replace @your_channel with my Telegram channel handle.
+Install Chappe if needed with `curl -LsSf https://raw.githubusercontent.com/crimeacs/chappe/main/scripts/install.sh | CHAPPE_CHANNEL=@your_channel sh`, then run `chappe --pretty onboard --channel @your_channel`, follow `agent_guided_setup`, ask me only for required Telegram values, sync 100 recent posts with comments after auth is ready, and produce a channel briefing with post ids, metrics, audience questions, growth experiments, and data-quality notes. If Chappe itself fails, patch locally only to unblock, then move the fix into https://github.com/crimeacs/chappe and propose a PR. Replace @your_channel with my Telegram channel handle.
 ```
 
 Chappe returns `agent_guided_setup`, `setup_steps`, `agent_integrations`, and
@@ -112,6 +112,9 @@ The response includes:
 Agent hosts should parse `agent_guided_setup`, ask for only the listed values,
 treat all `sensitive: true` fields as secrets, and avoid channel sync or
 analysis until `chappe onboard --check-auth` reports `authorizationStateReady`.
+The setup contract also includes `first_run_runbook`, `live_sync_validation`,
+`briefing_contract`, and `bug_protocol` so agents can validate the data before
+they write strategy.
 
 `chappe` with no arguments returns the same bootstrap payload.
 
@@ -188,6 +191,9 @@ chappe channel get @your_channel
 chappe sync @your_channel --limit 100
 chappe sync @your_channel --limit 100 --comments
 ```
+
+`sync` returns `metric_quality`. Agents should inspect it before using reply,
+comment, or reaction metrics in a briefing.
 
 Channel analytics:
 
@@ -301,8 +307,8 @@ All integrations call the public CLI. They do not import private Python APIs.
 ## Agent Contributions
 
 Agents may patch a local install to unblock a run. Treat that as scratch work.
-Move the fix into a clone of `crimeacs/chappe`, run tests, and open a pull
-request.
+Move the fix into a clone of `crimeacs/chappe`, add a test, run the suite, and
+open a pull request.
 
 Keep credentials and local Chappe state out of patches. That includes config
 files, TDLib data, SQLite stores, audit logs, and channel exports.

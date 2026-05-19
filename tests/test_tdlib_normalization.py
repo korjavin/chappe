@@ -20,6 +20,34 @@ def test_normalize_message_extracts_tdlib_metrics():
     assert post["link"] == "https://t.me/x/123"
 
 
+def test_normalize_message_extracts_nested_reply_info():
+    msg = {
+        "id": 124,
+        "content": {"@type": "messageText", "text": {"@type": "formattedText", "text": "hello"}},
+        "interaction_info": {
+            "view_count": 100,
+            "forward_count": 5,
+            "reply_info": {"@type": "messageReplyInfo", "reply_count": 9},
+        },
+    }
+
+    post = normalize_message(msg, channel="@x", username="x")
+
+    assert post["replies"] == 9
+
+
+def test_normalize_message_extracts_reaction_count_fallback():
+    msg = {
+        "id": 125,
+        "content": {"@type": "messageText", "text": {"@type": "formattedText", "text": "hello"}},
+        "interaction_info": {"reaction_count": 4},
+    }
+
+    post = normalize_message(msg, channel="@x", username="x")
+
+    assert post["reactions"] == 4
+
+
 class FakeGateway:
     def __init__(self, responses):
         self.responses = responses
