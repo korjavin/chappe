@@ -9,6 +9,30 @@
 
 **Ask Codex or Claude Code to grow a Telegram channel. Chappe is the CLI they call.**
 
+Copy-paste install for a channel-tailored first run:
+
+```bash
+curl -LsSf https://raw.githubusercontent.com/crimeacs/chappe/main/scripts/install.sh | CHAPPE_CHANNEL=@nn_for_science sh
+```
+
+Then ask Codex, Claude Code, OpenCode, OpenClaw, or Hermes:
+
+```text
+Use Chappe to analyze @nn_for_science. If Chappe is not configured, run
+chappe onboard --channel @nn_for_science, ask me only for the required
+Telegram values, then sync 100 recent posts with comments and produce a
+channel briefing.
+```
+
+The agent should call:
+
+```bash
+chappe --pretty onboard --channel @nn_for_science
+```
+
+Chappe returns `agent_guided_setup`, `setup_steps`, `agent_integrations`, and
+`intended_use` so the host can ask for credentials safely before it syncs data.
+
 Chappe gives agent hosts a private TDLib session; local SQLite analytics;
 policy-gated publish commands for channels such as `@nn_for_science`.
 
@@ -27,26 +51,6 @@ networks of towers that relayed coded signals before electric telegraphy. The
 name fits because Telegram is a modern messaging network, and Chappe turns
 channel signals into compact JSON that agents can read. Chappie is the mascot
 version: the tower keeper who watches the channel and signals the next move.
-
-## Try It With An Agent
-
-Ask Codex, Claude Code, OpenCode, OpenClaw, or Hermes:
-
-```text
-Use Chappe to analyze @nn_for_science. If Chappe is not configured, run
-chappe onboard --channel @nn_for_science, ask me only for the required
-Telegram values, then sync 100 recent posts with comments and produce a
-channel briefing.
-```
-
-The agent should call:
-
-```bash
-chappe --pretty onboard --channel @nn_for_science
-```
-
-Chappe returns `agent_guided_setup`, `setup_steps`, `agent_integrations`, and
-`intended_use` so the host can ask for credentials safely before it syncs data.
 
 ## What Chappe Is
 
@@ -73,7 +77,7 @@ still v1: expect sharp edges, fixture-backed tests, and a manual live auth path.
 The repo intentionally excludes the old MCP prototype, local `.env` files,
 Telegram sessions, fetched media, and private Claude Desktop configuration.
 
-## Install
+## Install Details
 
 Development install:
 
@@ -84,18 +88,6 @@ python -m venv .venv
 . .venv/bin/activate
 python -m pip install -e ".[dev]"
 chappe doctor
-```
-
-One-command install from GitHub:
-
-```bash
-curl -LsSf https://raw.githubusercontent.com/crimeacs/chappe/main/scripts/install.sh | sh
-```
-
-One-command install and channel-tailored bootstrap:
-
-```bash
-curl -LsSf https://raw.githubusercontent.com/crimeacs/chappe/main/scripts/install.sh | CHAPPE_CHANNEL=@nn_for_science sh
 ```
 
 The installer uses `uv tool install git+https://github.com/crimeacs/chappe` when

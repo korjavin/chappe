@@ -27,6 +27,7 @@ audience first, then Telegram channel owners second.
 
 - Show the mascot/social preview.
 - State the agent-host use case in the first sentence.
+- Put the copy-paste install command before the first explanatory section.
 - Show one prompt a user can paste into Codex or Claude Code.
 - Show the exact `chappe onboard` command.
 - Name supported hosts near the top: Codex/Claude Code/OpenCode/OpenClaw/Hermes.
