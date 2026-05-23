@@ -30,7 +30,7 @@ pytest -q
 
 ## Safety Rules
 
-- Do not commit `.env`, Telegram sessions, TDLib state, audit logs, fetched media,
+- Do not commit `.env`, Telethon session files, audit logs, fetched media,
   channel exports, or personal config files.
 - Do not print Telegram API hashes, phone numbers, login codes, or 2FA passwords
   in prose.

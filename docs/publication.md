@@ -26,7 +26,7 @@ release.
    - website: PyPI page after release
    - topics: `telegram`, `telegram-channel`, `telegram-cli`, `claude-code`,
      `codex`, `opencode`, `openclaw`, `hermes`, `agent-tools`,
-     `channel-analytics`, `tdlib`, `python`
+     `channel-analytics`, `telethon`, `python`
 
 5. Review the repository after push:
 

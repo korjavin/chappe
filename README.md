@@ -18,7 +18,7 @@ Install Chappe if needed with `curl -LsSf https://raw.githubusercontent.com/crim
 Chappe returns `agent_guided_setup`, `setup_steps`, `agent_integrations`, and
 `intended_use` so the host can ask for credentials safely before it syncs data.
 
-Chappe gives agent hosts a private TDLib session; local SQLite analytics;
+Chappe gives agent hosts a private Telethon session; local SQLite analytics;
 policy-gated publish commands for Telegram channels.
 
 The CLI collects channel data, ranks posts, mines audience questions, prepares
@@ -100,7 +100,7 @@ chappe --pretty bootstrap @your_channel
 
 The response includes:
 
-- `state`: config/TDLib/credential/auth readiness
+- `state`: config/Telethon/credential/auth readiness
 - `intended_use`: how Codex/Claude Code/OpenCode/OpenClaw/Hermes should call Chappe
 - `readiness`: blockers/warnings/score plus local-data status
 - `local_context`: local channel counts plus draft/policy/top-post status
@@ -142,20 +142,20 @@ You can also pass the values directly:
 chappe setup --api-id "$TELEGRAM_API_ID" --api-hash "$TELEGRAM_API_HASH" --channel @your_channel
 ```
 
-`chappe setup` writes `~/.config/chappe/config.toml` and generates a local TDLib
-database encryption key. If you prefer a template config and environment-based
-secret storage:
+`chappe setup` writes `~/.config/chappe/config.toml`. The Telethon session
+file lives under `~/.local/state/chappe/tdlib/chappe.session` (the directory
+name is kept for backward compatibility with existing configs). If you
+prefer a template config and environment-based secret storage:
 
 ```bash
 chappe config init
 export TELEGRAM_API_ID="123456"
 export TELEGRAM_API_HASH="your-api-hash"
-export CHAPPE_TDLIB_KEY="stable-local-tdlib-key"
 ```
 
 ## Authentication
 
-TDLib auth is step-by-step so an agent host can guide it safely:
+Auth is step-by-step so an agent host can guide it safely:
 
 ```bash
 chappe onboard --check-auth
@@ -191,8 +191,10 @@ export TELEGRAM_BOT_TOKEN="123456:ABC-bot-token"
 chappe auth login-bot
 ```
 
-`api_id` and `api_hash` are still required — TDLib needs them even when signing
-in as a bot.
+`api_id` and `api_hash` are still required — Telethon needs them even when
+signing in as a bot. Note that Telegram restricts reading channel history for
+bot accounts at the protocol level, so bot mode is primarily useful for
+publishing to channels where the bot is an administrator.
 
 ## Common Workflows
 
@@ -338,7 +340,7 @@ Move the fix into a clone of `crimeacs/chappe`, add a test, run the suite, and
 open a pull request.
 
 Keep credentials and local Chappe state out of patches. That includes config
-files, TDLib data, SQLite stores, audit logs, and channel exports.
+files, Telethon session files, SQLite stores, audit logs, and channel exports.
 
 ## Local Data And Privacy
 
@@ -346,12 +348,12 @@ By default Chappe stores local state under:
 
 - config: `~/.config/chappe/config.toml`
 - derived analytics store: `~/.local/share/chappe/chappe.db`
-- TDLib state: `~/.local/state/chappe/tdlib`
+- Telethon session: `~/.local/state/chappe/tdlib/chappe.session`
 - audit log: `~/.local/state/chappe/audit.jsonl`
 
-Do not commit local configs, `.env` files, TDLib state, Telegram sessions,
-downloaded media, channel exports, or audit logs. The repository `.gitignore`
-blocks these by default.
+Do not commit local configs, `.env` files, Telethon session files, downloaded
+media, channel exports, or audit logs. The repository `.gitignore` blocks
+these by default.
 
 ## Development
 
@@ -399,7 +401,7 @@ agents/                     Human-readable agent integration notes
 
 ## Roadmap
 
-- hardened live TDLib sync for large channels
+- hardened live Telethon sync for large channels
 - richer admin statistics and historical snapshots
 - better similar-channel discovery
 - comment-topic clustering and audience-demand reports

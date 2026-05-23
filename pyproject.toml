@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Chappe contributors" }]
-keywords = ["telegram", "cli", "growth", "analytics", "agents", "tdlib"]
+keywords = ["telegram", "cli", "growth", "analytics", "agents", "telethon"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
@@ -30,7 +30,7 @@ dependencies = [
   "pydantic>=2.7",
   "PyYAML>=6.0",
   "tomli>=2.0; python_version<'3.11'",
-  "tdjson>=1.8.64.post1",
+  "Telethon>=1.36",
   "Pillow>=10.0",
 ]
 

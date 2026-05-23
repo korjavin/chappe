@@ -8,8 +8,23 @@ tagged release is cut.
 
 ## Unreleased
 
+- **Breaking:** replaced the TDLib backend with Telethon. Existing sessions
+  under `~/.local/state/chappe/tdlib/` no longer authorize Chappe; sign in
+  again with `chappe auth login --phone ...` (or `chappe auth login-bot`).
+- Removed the `tdjson` native dependency. Telethon is pure Python.
+- Removed `--tdlib-key` from `chappe setup`. Telethon's session file does
+  not need a separate database encryption key. The `database_encryption_key`
+  TOML field is silently ignored if present.
+- Renamed JSON output keys for the new backend: `tdjson_available` →
+  `telethon_available`, `tdlib_dir` → `session_dir`. The `tdlib_dir` config
+  field name is preserved so existing configs still load.
+- Step-by-step phone login still works (`--phone` → `--code` → `--password`
+  for 2FA). Chappe persists the Telethon `phone_code_hash` between CLI
+  invocations under `<session_dir>/auth_state.json`.
 - Added bot-account auth: `chappe auth login-bot --token <BotFather token>`
-  submits `checkAuthenticationBotToken` instead of asking for a phone number.
+  signs in via Telethon's bot sign-in path. Bots can publish to channels
+  where they are administrators; Telegram still restricts reading channel
+  history for bot accounts.
 - Added `--bot-token` to `chappe setup` and `bot_token` / `bot_token_env`
   fields on `TelegramConfig` (env var defaults to `TELEGRAM_BOT_TOKEN`).
 - Documented bot mode in the README under Authentication.

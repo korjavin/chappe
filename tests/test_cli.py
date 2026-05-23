@@ -95,7 +95,7 @@ def test_onboard_channel_tails_setup_command(tmp_path):
 def test_gateway_configures_before_return(monkeypatch, tmp_path):
     cfg = ChappeConfig.load(tmp_path / "config.toml")
 
-    class FakeTDLibGateway:
+    class FakeTelegramGateway:
         def __init__(self, config):
             self.config = config
             self.configured = False
@@ -104,7 +104,7 @@ def test_gateway_configures_before_return(monkeypatch, tmp_path):
             self.configured = True
             return {"@type": "authorizationStateReady"}
 
-    monkeypatch.setattr(cli, "TDLibGateway", FakeTDLibGateway)
+    monkeypatch.setattr(cli, "TelegramGateway", FakeTelegramGateway)
 
     gateway = cli._gateway(SimpleNamespace(obj={"config": cfg}))
 
@@ -114,7 +114,6 @@ def test_gateway_configures_before_return(monkeypatch, tmp_path):
 
 def test_sync_metric_quality_warns_on_missing_comment_sync():
     quality = cli._sync_metric_quality(
-        [{"interaction_info": {"reply_info": {"reply_count": 2}}}],
         [{"id": "1", "replies": 2, "reactions": 0}],
         comments_requested=True,
         synced_comments=0,
@@ -453,15 +452,12 @@ def test_setup_escapes_toml_strings(tmp_path):
             'hash"with\\chars',
             "--channel",
             '@nn_"science',
-            "--tdlib-key",
-            'key"with\\chars',
         ],
         env={"CHAPPE_HOME": str(tmp_path)},
     )
     assert result.exit_code == 0
     cfg = ChappeConfig.load(tmp_path / ".config" / "chappe" / "config.toml")
     assert cfg.telegram.api_hash == 'hash"with\\chars'
-    assert cfg.telegram.database_encryption_key == 'key"with\\chars'
     assert cfg.defaults.default_channel == '@nn_"science'
 
 
@@ -508,7 +504,7 @@ def test_auth_login_bot_submits_bot_token(monkeypatch, tmp_path):
         def close(self):
             captured["closed"] = True
 
-    monkeypatch.setattr(cli, "TDLibGateway", FakeGateway)
+    monkeypatch.setattr(cli, "TelegramGateway", FakeGateway)
 
     result = runner.invoke(
         app,
@@ -544,7 +540,7 @@ def test_auth_login_bot_requires_token_when_unconfigured(monkeypatch, tmp_path):
         def close(self):
             pass
 
-    monkeypatch.setattr(cli, "TDLibGateway", FakeGateway)
+    monkeypatch.setattr(cli, "TelegramGateway", FakeGateway)
     monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
 
     result = runner.invoke(

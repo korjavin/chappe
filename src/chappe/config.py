@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import secrets
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -125,10 +124,9 @@ DEFAULT_CONFIG = """# Chappe configuration
 [telegram]
 api_id = "${TELEGRAM_API_ID}"
 api_hash = "${TELEGRAM_API_HASH}"
+# Directory where the Telethon session file lives. (Kept under the historic
+# `tdlib_dir` key so existing configs keep working.)
 tdlib_dir = "~/.local/state/chappe/tdlib"
-database_encryption_key_env = "CHAPPE_TDLIB_KEY"
-# Optional: store a local TDLib database key directly in config instead of env.
-# database_encryption_key = "replace-with-a-long-local-random-string"
 # Optional: sign in as a Telegram bot instead of a user account.
 # Either set TELEGRAM_BOT_TOKEN in the environment or put the token here.
 # bot_token = "123456:ABC-..."
@@ -152,7 +150,6 @@ def render_config(
     *,
     api_id: str | None = None,
     api_hash: str | None = None,
-    database_encryption_key: str | None = None,
     default_channel: str | None = None,
     bot_token: str | None = None,
 ) -> str:
@@ -161,7 +158,6 @@ def render_config(
 
     api_id_value = api_id if api_id is not None else "${TELEGRAM_API_ID}"
     api_hash_value = api_hash if api_hash is not None else "${TELEGRAM_API_HASH}"
-    key_value = database_encryption_key or secrets.token_urlsafe(32)
     channel_line = f"default_channel = {toml_string(default_channel)}\n" if default_channel else ""
     bot_token_line = f"bot_token = {toml_string(bot_token)}\n" if bot_token else ""
     return f"""# Chappe configuration
@@ -170,8 +166,8 @@ def render_config(
 [telegram]
 api_id = {toml_string(api_id_value)}
 api_hash = {toml_string(api_hash_value)}
+# Directory where the Telethon session file lives.
 tdlib_dir = "~/.local/state/chappe/tdlib"
-database_encryption_key = {toml_string(key_value)}
 {bot_token_line}
 [paths]
 data_dir = "~/.local/share/chappe"

@@ -26,7 +26,7 @@ pytest -q
 - Preserve compact JSON output by default.
 - Send diagnostics and failures to stderr.
 - Add or update tests when you change CLI output, config loading, policy
-  validation, analytics scoring, or TDLib normalization.
+  validation, analytics scoring, or Telethon message normalization.
 - Keep public docs accurate for agents and humans.
 - Do not commit local Telegram state, `.env` files, session files, fetched media,
   audit logs, or channel exports.
