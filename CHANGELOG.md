@@ -8,6 +8,12 @@ tagged release is cut.
 
 ## Unreleased
 
+- Added bot-account auth: `chappe auth login-bot --token <BotFather token>`
+  submits `checkAuthenticationBotToken` instead of asking for a phone number.
+- Added `--bot-token` to `chappe setup` and `bot_token` / `bot_token_env`
+  fields on `TelegramConfig` (env var defaults to `TELEGRAM_BOT_TOKEN`).
+- Documented bot mode in the README under Authentication.
+
 ## 0.2.0 — 2026-05-19
 
 - Added `chappe compare @ch1 @ch2 [@ch3 ...]` for cross-channel post leaderboards.
