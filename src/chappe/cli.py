@@ -285,17 +285,26 @@ def _setup_steps(cfg: ChappeConfig, *, channel: str | None = None) -> list[dict[
         steps.append({"id": "config", "status": "done", "path": str(cfg.storage.config_path)})
 
     if _credentials_present(cfg):
+        auth_commands = [
+            "chappe auth status",
+            "chappe auth login --phone +15551234567",
+            "chappe auth login --code <telegram-code>",
+            'chappe auth login --password "<2fa-password-if-needed>"',
+        ]
+        if cfg.telegram.bot_token:
+            auth_commands.append("chappe auth login-bot")
+        else:
+            auth_commands.append("chappe auth login-bot --token 123456:ABC-...")
         steps.append(
             {
                 "id": "authenticate",
                 "status": "todo",
-                "commands": [
-                    "chappe auth status",
-                    "chappe auth login --phone +15551234567",
-                    "chappe auth login --code <telegram-code>",
-                    'chappe auth login --password "<2fa-password-if-needed>"',
-                ],
-                "why": "Authorizes TDLib as your Telegram account.",
+                "commands": auth_commands,
+                "why": (
+                    "Authorizes TDLib as your Telegram account, or as a bot when you "
+                    "use chappe auth login-bot. Bots can only read channels they have "
+                    "been added to as administrators."
+                ),
             }
         )
 
@@ -926,6 +935,11 @@ def setup(
     api_hash: Optional[str] = typer.Option(None, "--api-hash", help="Telegram API hash."),
     channel: Optional[str] = typer.Option(None, "--channel", help="Default channel handle."),
     tdlib_key: Optional[str] = typer.Option(None, "--tdlib-key", help="Local TDLib DB key."),
+    bot_token: Optional[str] = typer.Option(
+        None,
+        "--bot-token",
+        help="Persist a Telegram bot token in config to sign in as a bot.",
+    ),
     force: bool = typer.Option(False, "--force", help="Overwrite existing config."),
 ) -> None:
     """Create a complete local config for agent-host use."""
@@ -936,11 +950,13 @@ def setup(
         api_hash_value = api_hash or cfg.telegram.api_hash
         if (api_id_value and not api_hash_value) or (api_hash_value and not api_id_value):
             raise ChappeError("--api-id and --api-hash must be provided together.", ExitCode.USAGE_ERROR)
+        bot_token_value = bot_token or cfg.telegram.bot_token
         contents = render_config(
             api_id=api_id_value,
             api_hash=api_hash_value,
             database_encryption_key=tdlib_key,
             default_channel=channel,
+            bot_token=bot_token_value,
         )
         written = init_config(cfg.storage.config_path, force=force, contents=contents)
         new_cfg = ChappeConfig.load(written)
@@ -950,6 +966,7 @@ def setup(
                 "ok": True,
                 "config_path": written,
                 "credentials_present": bool(new_cfg.telegram.api_id and new_cfg.telegram.api_hash),
+                "bot_token_present": bool(new_cfg.telegram.bot_token),
                 "default_channel": new_cfg.defaults.default_channel,
                 "next_commands": _setup_steps(new_cfg, channel=channel),
             },
@@ -1036,6 +1053,26 @@ def auth_login(
         result = gateway.login_interactive(phone, code=code, password=password)
         gateway.close()
         _emit(ctx, {"ok": True, **result})
+
+    _handle(ctx, run)
+
+
+@auth_app.command("login-bot")
+def auth_login_bot(
+    ctx: typer.Context,
+    token: Optional[str] = typer.Option(
+        None,
+        "--token",
+        help="Telegram bot token from @BotFather. Falls back to config bot_token / TELEGRAM_BOT_TOKEN.",
+    ),
+) -> None:
+    """Authenticate as a Telegram bot instead of a user account."""
+
+    def run():
+        gateway = _gateway(ctx)
+        result = gateway.login_bot(token)
+        gateway.close()
+        _emit(ctx, {"ok": True, "actor": "bot", **result})
 
     _handle(ctx, run)
 

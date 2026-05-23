@@ -174,6 +174,26 @@ Auth states:
 Chappe never asks an agent to guess credentials. If an agent sees missing
 credentials or auth state, it should stop analysis and guide setup first.
 
+### Bot mode
+
+Chappe can also sign in as a Telegram bot. Bots can only read channels they
+have been added to as administrators, and the Bot API exposes fewer metrics
+than a user session, but it is useful for unattended setups.
+
+```bash
+# One-shot, token from @BotFather:
+chappe auth login-bot --token 123456:ABC-bot-token
+
+# Or persist the token in config / env so chappe auth login-bot picks it up:
+chappe setup --api-id "$TELEGRAM_API_ID" --api-hash "$TELEGRAM_API_HASH" \
+    --bot-token 123456:ABC-bot-token --channel @your_channel
+export TELEGRAM_BOT_TOKEN="123456:ABC-bot-token"
+chappe auth login-bot
+```
+
+`api_id` and `api_hash` are still required — TDLib needs them even when signing
+in as a bot.
+
 ## Common Workflows
 
 Health check:

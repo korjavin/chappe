@@ -294,10 +294,13 @@ class TDLibGateway:
             return {"authorized": True, "state": stype}
         if stype == "authorizationStateWaitPhoneNumber":
             if not phone:
+                next_command = "chappe auth login --phone +15551234567"
+                if self.config.telegram.bot_token:
+                    next_command = "chappe auth login-bot"
                 raise ChappeError(
                     "Phone number is required for TDLib login.",
                     ExitCode.USAGE_ERROR,
-                    next_command="chappe auth login --phone +15551234567",
+                    next_command=next_command,
                 )
             self._send_auth_request(
                 {
@@ -346,6 +349,32 @@ class TDLibGateway:
                 "state": next_state.get("@type"),
             }
         return {"authorized": False, "state": stype, "raw": state}
+
+    def login_bot(self, token: str | None = None) -> dict[str, Any]:
+        token_value = token or self.config.telegram.bot_token
+        if not token_value:
+            raise ChappeError(
+                "Bot token is required. Pass --token or set telegram.bot_token / TELEGRAM_BOT_TOKEN.",
+                ExitCode.USAGE_ERROR,
+                next_command="chappe auth login-bot --token 123456:ABC-...",
+            )
+        state = self.configure()
+        stype = state.get("@type")
+        if stype == "authorizationStateReady":
+            return {"authorized": True, "state": stype}
+        if stype not in {
+            "authorizationStateWaitPhoneNumber",
+            "authorizationStateWaitEmailAddress",
+        }:
+            return {"authorized": False, "state": stype, "raw": state}
+        self._send_auth_request(
+            {"@type": "checkAuthenticationBotToken", "token": token_value}
+        )
+        next_state = self.wait_for_authorization_state()
+        return {
+            "authorized": next_state.get("@type") == "authorizationStateReady",
+            "state": next_state.get("@type"),
+        }
 
     def resolve_chat(self, handle: str) -> dict[str, Any]:
         if handle.startswith("@"):
