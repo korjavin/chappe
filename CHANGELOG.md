@@ -8,6 +8,14 @@ tagged release is cut.
 
 ## Unreleased
 
+- Added `chappe import <path> --channel @handle` for ingesting a Telegram
+  Desktop JSON export into the local posts store. Useful when a user-account
+  session is unavailable (e.g. login rate-limited) and the channel owner has
+  a Desktop export instead. The Desktop format does not include view or
+  forward counts, so the command emits warnings telling agents not to rank
+  by those metrics from imported data; reactions, timing, and content
+  analysis still work. Comments live in the linked discussion group, which
+  must be exported separately and reimported the same way.
 - **Breaking:** replaced the TDLib backend with Telethon. Existing sessions
   under `~/.local/state/chappe/tdlib/` no longer authorize Chappe; sign in
   again with `chappe auth login --phone ...` (or `chappe auth login-bot`).

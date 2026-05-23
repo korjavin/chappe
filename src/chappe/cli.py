@@ -34,6 +34,7 @@ from .gateway import (
     content_hash,
     telethon_available,
 )
+from .imports import IMPORT_WARNINGS, collect_posts, parse_desktop_export
 
 
 app = typer.Typer(
@@ -1172,6 +1173,67 @@ def sync(
                 "next_from_message_id": history.get("next_from_message_id"),
             },
         )
+
+    _handle(ctx, run)
+
+
+@app.command("import")
+def import_export(
+    ctx: typer.Context,
+    path: Path = typer.Argument(..., help="Path to a Telegram Desktop JSON export."),
+    channel: Optional[str] = typer.Option(
+        None,
+        "--channel",
+        help="Channel handle (e.g. @your_channel). Falls back to defaults.default_channel.",
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Parse and report counts without writing to the store."
+    ),
+) -> None:
+    """Import a Telegram Desktop JSON export into the local posts store.
+
+    Useful when a user-account session is unavailable (rate-limited login,
+    bot-only setup, archival). The Desktop export does not include view or
+    forward counts, so analytics that depend on those metrics are unreliable
+    on imported data; reactions, timing, and content analysis still work.
+    """
+
+    def run():
+        cfg = _config(ctx)
+        target_channel = channel or cfg.defaults.default_channel
+        if not target_channel:
+            raise ChappeError(
+                "Channel handle required. Pass --channel @your_channel "
+                "or set defaults.default_channel in config.",
+                ExitCode.USAGE_ERROR,
+                next_command="chappe import <path> --channel @your_channel",
+            )
+        export = parse_desktop_export(Path(path))
+        posts, skipped_service = collect_posts(export, channel=target_channel)
+        payload: dict[str, Any] = {
+            "ok": True,
+            "channel": target_channel,
+            "export_source": str(path),
+            "export_type": export.get("type"),
+            "export_name": export.get("name"),
+            "candidate_posts": len(posts),
+            "skipped_service_messages": skipped_service,
+            "posts_with_reactions": sum(1 for p in posts if int(p["reactions"] or 0) > 0),
+            "warnings": IMPORT_WARNINGS,
+        }
+        if dry_run:
+            payload["dry_run"] = True
+            _emit(ctx, payload)
+            return
+        count = _store(ctx).upsert_posts(target_channel, posts)
+        payload["imported_posts"] = count
+        payload["next_commands"] = [
+            f"chappe briefing {target_channel}",
+            f"chappe posts top {target_channel} --by reactions",
+            f"chappe posts timing {target_channel}",
+            f"chappe wrapped {target_channel}",
+        ]
+        _emit(ctx, payload)
 
     _handle(ctx, run)
 
