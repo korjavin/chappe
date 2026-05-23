@@ -92,6 +92,44 @@ def test_chat_history_handles_zero_limit():
     assert gateway.calls == []
 
 
+def test_login_bot_sends_check_authentication_bot_token(monkeypatch, tmp_path):
+    from chappe.errors import ChappeError
+
+    cfg = ChappeConfig.load(tmp_path / "config.toml")
+    gateway = TDLibGateway(cfg)
+
+    sent: list[dict] = []
+
+    def fake_configure(self):
+        return {"@type": "authorizationStateWaitPhoneNumber"}
+
+    def fake_send_auth_request(self, query):
+        sent.append(query)
+        return query
+
+    def fake_wait_for_authorization_state(self, *, timeout=20.0):
+        return {"@type": "authorizationStateReady"}
+
+    monkeypatch.setattr(TDLibGateway, "configure", fake_configure)
+    monkeypatch.setattr(TDLibGateway, "_send_auth_request", fake_send_auth_request)
+    monkeypatch.setattr(
+        TDLibGateway, "wait_for_authorization_state", fake_wait_for_authorization_state
+    )
+
+    result = gateway.login_bot("123456:ABC")
+
+    assert sent == [{"@type": "checkAuthenticationBotToken", "token": "123456:ABC"}]
+    assert result == {"authorized": True, "state": "authorizationStateReady"}
+
+    gateway_no_token = TDLibGateway(cfg)
+    try:
+        gateway_no_token.login_bot()
+    except ChappeError as exc:
+        assert "Bot token is required" in exc.message
+    else:
+        raise AssertionError("expected ChappeError when no token is supplied")
+
+
 def test_tdlib_client_disables_native_logs(monkeypatch, tmp_path):
     class FakeTDJson:
         def __init__(self):

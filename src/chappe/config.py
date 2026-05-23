@@ -30,6 +30,8 @@ class TelegramConfig:
     api_hash: str | None
     database_encryption_key_env: str = "CHAPPE_TDLIB_KEY"
     database_encryption_key: str | None = None
+    bot_token: str | None = None
+    bot_token_env: str = "TELEGRAM_BOT_TOKEN"
 
 
 @dataclass(frozen=True)
@@ -71,6 +73,8 @@ class ChappeConfig:
 
         api_id = expand_env(telegram.get("api_id")) or os.getenv("TELEGRAM_API_ID")
         api_hash = expand_env(telegram.get("api_hash")) or os.getenv("TELEGRAM_API_HASH")
+        bot_token_env = str(telegram.get("bot_token_env", "TELEGRAM_BOT_TOKEN"))
+        bot_token = expand_env(telegram.get("bot_token")) or os.getenv(bot_token_env)
         tdlib_dir = Path(telegram.get("tdlib_dir", state_root / "tdlib")).expanduser()
         sqlite_path = Path(raw.get("paths", {}).get("sqlite_path", data_root / "chappe.db")).expanduser()
         audit_path = Path(raw.get("paths", {}).get("audit_log", state_root / "audit.jsonl")).expanduser()
@@ -83,6 +87,8 @@ class ChappeConfig:
                     telegram.get("database_encryption_key_env", "CHAPPE_TDLIB_KEY")
                 ),
                 database_encryption_key=expand_env(telegram.get("database_encryption_key")),
+                bot_token=str(bot_token) if bot_token else None,
+                bot_token_env=bot_token_env,
             ),
             storage=StorageConfig(
                 config_path=path,
@@ -123,6 +129,10 @@ tdlib_dir = "~/.local/state/chappe/tdlib"
 database_encryption_key_env = "CHAPPE_TDLIB_KEY"
 # Optional: store a local TDLib database key directly in config instead of env.
 # database_encryption_key = "replace-with-a-long-local-random-string"
+# Optional: sign in as a Telegram bot instead of a user account.
+# Either set TELEGRAM_BOT_TOKEN in the environment or put the token here.
+# bot_token = "123456:ABC-..."
+# bot_token_env = "TELEGRAM_BOT_TOKEN"
 
 [paths]
 data_dir = "~/.local/share/chappe"
@@ -144,6 +154,7 @@ def render_config(
     api_hash: str | None = None,
     database_encryption_key: str | None = None,
     default_channel: str | None = None,
+    bot_token: str | None = None,
 ) -> str:
     def toml_string(value: str) -> str:
         return json.dumps(value)
@@ -152,6 +163,7 @@ def render_config(
     api_hash_value = api_hash if api_hash is not None else "${TELEGRAM_API_HASH}"
     key_value = database_encryption_key or secrets.token_urlsafe(32)
     channel_line = f"default_channel = {toml_string(default_channel)}\n" if default_channel else ""
+    bot_token_line = f"bot_token = {toml_string(bot_token)}\n" if bot_token else ""
     return f"""# Chappe configuration
 # Chappe is an unofficial Telegram channel analytics CLI.
 
@@ -160,7 +172,7 @@ api_id = {toml_string(api_id_value)}
 api_hash = {toml_string(api_hash_value)}
 tdlib_dir = "~/.local/state/chappe/tdlib"
 database_encryption_key = {toml_string(key_value)}
-
+{bot_token_line}
 [paths]
 data_dir = "~/.local/share/chappe"
 state_dir = "~/.local/state/chappe"

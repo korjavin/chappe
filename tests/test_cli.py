@@ -471,6 +471,107 @@ def test_agent_list_smoke(tmp_path):
     assert "codex" in result.stdout
 
 
+def test_setup_persists_bot_token(tmp_path):
+    result = runner.invoke(
+        app,
+        [
+            "setup",
+            "--api-id",
+            "123",
+            "--api-hash",
+            "hash",
+            "--bot-token",
+            "123456:ABC-bot-token",
+        ],
+        env={"CHAPPE_HOME": str(tmp_path)},
+    )
+    assert result.exit_code == 0
+    assert '"bot_token_present": true' in result.stdout
+    cfg = ChappeConfig.load(tmp_path / ".config" / "chappe" / "config.toml")
+    assert cfg.telegram.bot_token == "123456:ABC-bot-token"
+
+
+def test_auth_login_bot_submits_bot_token(monkeypatch, tmp_path):
+    captured: dict[str, object] = {}
+
+    class FakeGateway:
+        def __init__(self, config):
+            self.config = config
+
+        def configure(self):
+            return {"@type": "authorizationStateWaitPhoneNumber"}
+
+        def login_bot(self, token):
+            captured["token"] = token
+            return {"authorized": True, "state": "authorizationStateReady"}
+
+        def close(self):
+            captured["closed"] = True
+
+    monkeypatch.setattr(cli, "TDLibGateway", FakeGateway)
+
+    result = runner.invoke(
+        app,
+        ["auth", "login-bot", "--token", "123456:ABC"],
+        env={"CHAPPE_HOME": str(tmp_path)},
+    )
+
+    assert result.exit_code == 0, result.stdout
+    assert captured["token"] == "123456:ABC"
+    assert captured.get("closed") is True
+    assert '"actor": "bot"' in result.stdout
+    assert '"authorized": true' in result.stdout
+
+
+def test_auth_login_bot_requires_token_when_unconfigured(monkeypatch, tmp_path):
+    class FakeGateway:
+        def __init__(self, config):
+            self.config = config
+
+        def configure(self):
+            return {"@type": "authorizationStateWaitPhoneNumber"}
+
+        def login_bot(self, token):
+            from chappe.errors import ChappeError, ExitCode
+
+            if not token and not self.config.telegram.bot_token:
+                raise ChappeError(
+                    "Bot token is required. Pass --token or set telegram.bot_token / TELEGRAM_BOT_TOKEN.",
+                    ExitCode.USAGE_ERROR,
+                )
+            return {"authorized": True, "state": "authorizationStateReady"}
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(cli, "TDLibGateway", FakeGateway)
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+
+    result = runner.invoke(
+        app,
+        ["auth", "login-bot"],
+        env={"CHAPPE_HOME": str(tmp_path)},
+    )
+    combined = result.stdout + result.stderr
+    assert result.exit_code != 0
+    assert "Bot token is required" in combined
+
+
+def test_onboard_authenticate_step_mentions_login_bot(tmp_path):
+    runner.invoke(
+        app,
+        ["setup", "--api-id", "123", "--api-hash", "hash"],
+        env={"CHAPPE_HOME": str(tmp_path)},
+    )
+    result = runner.invoke(
+        app,
+        ["onboard", "--channel", "@nn_for_science"],
+        env={"CHAPPE_HOME": str(tmp_path)},
+    )
+    assert result.exit_code == 0
+    assert "chappe auth login-bot" in result.stdout
+
+
 def test_agent_install_codex_places_skill_at_target_root(tmp_path):
     target = tmp_path / "codex-skill"
     result = runner.invoke(
