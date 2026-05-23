@@ -30,7 +30,7 @@ audience first, then Telegram channel owners second.
 - Put one copy-paste agent prompt before the first explanatory section.
 - Include install and `chappe onboard` inside that prompt.
 - Name supported hosts near the top: Codex/Claude Code/OpenCode/OpenClaw/Hermes.
-- Keep privacy visible: TDLib local state, SQLite local store, policy-gated publish.
+- Keep privacy visible: Telethon local session, SQLite local store, policy-gated publish.
 - Keep the README first screen under one minute to scan.
 
 ## Repo Metadata
@@ -45,7 +45,7 @@ Topics:
 
 ```text
 telegram, telegram-channel, telegram-cli, claude-code, codex, opencode,
-openclaw, hermes, agent-tools, channel-analytics, tdlib, python
+openclaw, hermes, agent-tools, channel-analytics, telethon, python
 ```
 
 ## Launch Copy
@@ -56,7 +56,7 @@ GitHub/HN short post:
 I built Chappe, an Apache-2.0 CLI that lets Codex or Claude Code analyze a
 Telegram channel.
 
-It uses TDLib locally, stores derived analytics in SQLite, and gives agents
+It uses Telethon locally, stores derived analytics in SQLite, and gives agents
 JSON outputs for top posts, comments, audience questions, draft ideas, and
 policy-gated publishing.
 
@@ -70,7 +70,7 @@ Chappe is a CLI tool surface for Telegram channel agents.
 
 Ask Codex or Claude Code: "analyze my channel and tell me what to post next."
 
-TDLib local session. SQLite local store. JSON for agents. Policy-gated publish.
+Telethon local session. SQLite local store. JSON for agents. Policy-gated publish.
 https://github.com/crimeacs/chappe
 ```
 

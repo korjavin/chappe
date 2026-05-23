@@ -15,7 +15,7 @@ owner through GitHub. Include:
 - operating system and Python version
 - steps to reproduce
 - expected and actual behavior
-- whether credentials, TDLib state, or channel data may be exposed
+- whether credentials, Telethon session files, or channel data may be exposed
 
 ## Sensitive Data
 
@@ -24,8 +24,7 @@ Never commit:
 - `.env` files
 - Telegram API hashes
 - phone numbers, login codes, or 2FA passwords
-- TDLib directories
-- Telethon or TDLib session files
+- Telethon session files
 - local SQLite analytics stores
 - audit logs
 - fetched media or channel exports

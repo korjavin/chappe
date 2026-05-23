@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for reporting a bug. Do not include Telegram API hashes, phone
-        numbers, login codes, session files, TDLib state, or private channel data.
+        numbers, login codes, Telethon session files, or private channel data.
   - type: textarea
     id: summary
     attributes:

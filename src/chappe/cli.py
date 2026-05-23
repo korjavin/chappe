@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import platform
 import shlex
 import shutil
@@ -30,11 +29,10 @@ from .errors import ChappeError, ExitCode
 from .output import emit, fail
 from .policy import assert_publish_allowed, load_policy, validate_policy
 from .store import Store
-from .tdlib import (
-    TDLibGateway,
+from .gateway import (
+    TelegramGateway,
     content_hash,
-    normalize_message,
-    tdjson_available,
+    telethon_available,
 )
 
 
@@ -43,7 +41,7 @@ app = typer.Typer(
     invoke_without_command=True,
     help="Chappe: CLI tool surface for Telegram channel agents.",
 )
-auth_app = typer.Typer(no_args_is_help=True, help="Authenticate with Telegram through TDLib.")
+auth_app = typer.Typer(no_args_is_help=True, help="Authenticate with Telegram through Telethon.")
 config_app = typer.Typer(no_args_is_help=True, help="Manage Chappe config.")
 channel_app = typer.Typer(no_args_is_help=True, help="Channel analytics and metadata.")
 posts_app = typer.Typer(no_args_is_help=True, help="Post analytics.")
@@ -107,8 +105,8 @@ def _store(ctx: typer.Context) -> Store:
     return Store(_config(ctx).storage.sqlite_path)
 
 
-def _gateway(ctx: typer.Context) -> TDLibGateway:
-    gateway = TDLibGateway(_config(ctx))
+def _gateway(ctx: typer.Context) -> TelegramGateway:
+    gateway = TelegramGateway(_config(ctx))
     gateway.configure()
     return gateway
 
@@ -124,13 +122,6 @@ def _handle(ctx: typer.Context, fn):
         fail(exc, pretty=_pretty(ctx))
 
 
-def _tdlib_key_present(cfg: ChappeConfig) -> bool:
-    return bool(
-        cfg.telegram.database_encryption_key
-        or os.getenv(cfg.telegram.database_encryption_key_env)
-    )
-
-
 def _credentials_present(cfg: ChappeConfig) -> bool:
     return bool(cfg.telegram.api_id and cfg.telegram.api_hash)
 
@@ -139,45 +130,29 @@ def _channel_arg(channel: str) -> str:
     return shlex.quote(channel)
 
 
-def _raw_reply_info(message: dict[str, Any]) -> dict[str, Any]:
-    interaction = message.get("interaction_info") or {}
-    return interaction.get("reply_info") or message.get("reply_info") or {}
-
-
-def _raw_reactions(message: dict[str, Any]) -> Any:
-    interaction = message.get("interaction_info") or {}
-    return interaction.get("reactions") or message.get("reactions")
-
-
 def _sync_metric_quality(
-    messages: list[dict[str, Any]],
     posts: list[dict[str, Any]],
     *,
     comments_requested: bool,
     synced_comments: int,
     comment_errors: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    reply_payload_count = sum(1 for message in messages if _raw_reply_info(message))
-    reaction_payload_count = sum(1 for message in messages if _raw_reactions(message))
     posts_with_replies = sum(1 for post in posts if int(post.get("replies") or 0) > 0)
     posts_with_reactions = sum(1 for post in posts if int(post.get("reactions") or 0) > 0)
     warnings: list[str] = []
     notes: list[str] = []
 
-    if reply_payload_count and not posts_with_replies:
-        warnings.append("TDLib returned reply_info payloads, but Chappe normalized zero replies.")
     if comments_requested and posts_with_replies and not synced_comments:
         warnings.append("Posts have replies, but no comments were synced.")
-    if reaction_payload_count and not posts_with_reactions:
-        warnings.append("TDLib returned reaction payloads, but Chappe normalized zero reactions.")
-    if not reaction_payload_count:
-        notes.append("TDLib did not return post reaction payloads for this sync.")
+    if posts and not posts_with_reactions:
+        notes.append(
+            "Telethon returned no reaction counts for this sync; Telegram may not expose "
+            "them for this account, or the channel has none."
+        )
 
     return {
         "posts_seen": len(posts),
-        "posts_with_reply_info_payload": reply_payload_count,
         "posts_with_replies": posts_with_replies,
-        "posts_with_reaction_payload": reaction_payload_count,
         "posts_with_reactions": posts_with_reactions,
         "comments_requested": comments_requested,
         "comment_thread_candidates": posts_with_replies,
@@ -201,7 +176,9 @@ def _briefing_data_quality(posts: list[dict[str, Any]], comments: list[dict[str,
     if posts_with_replies and not comments:
         warnings.append("Posts have replies, but no comments are stored.")
     if not posts_with_reactions:
-        notes.append("No post reactions are stored. Telegram or TDLib may not expose them for this sync.")
+        notes.append(
+            "No post reactions are stored. Telegram may not expose them for this account."
+        )
 
     return {
         "posts_available": len(posts),
@@ -266,7 +243,7 @@ def _setup_steps(cfg: ChappeConfig, *, channel: str | None = None) -> list[dict[
                 "id": "create_config",
                 "status": "todo",
                 "command": setup_command,
-                "why": "Creates a local config with TDLib storage and a database encryption key.",
+                "why": "Creates a local config with Telethon session storage.",
             }
         )
     elif not _credentials_present(cfg):
@@ -301,9 +278,10 @@ def _setup_steps(cfg: ChappeConfig, *, channel: str | None = None) -> list[dict[
                 "status": "todo",
                 "commands": auth_commands,
                 "why": (
-                    "Authorizes TDLib as your Telegram account, or as a bot when you "
-                    "use chappe auth login-bot. Bots can only read channels they have "
-                    "been added to as administrators."
+                    "Authorizes Telethon as your Telegram account, or as a bot when you "
+                    "use chappe auth login-bot. Bots can publish to channels where they "
+                    "are administrators, but Telegram restricts reading channel history "
+                    "for bot accounts."
                 ),
             }
         )
@@ -390,7 +368,7 @@ def _agent_guided_setup(
                 "id": "telegram_2fa_password",
                 "label": "Telegram 2FA password",
                 "sensitive": True,
-                "ask_after": "Only needed when TDLib reports authorizationStateWaitPassword.",
+                "ask_after": "Only needed when Telethon reports authorizationStateWaitPassword.",
             }
         )
     elif auth_type != "authorizationStateReady":
@@ -513,7 +491,7 @@ def _agent_guided_setup(
             "preferred_posts_for_briefing": 100,
             "comment_rule": "When sync reports posts_with_replies > 0, comments_requested should normally produce synced_comments > 0.",
             "metric_rule": "Use metric_quality before making claims about replies or reactions.",
-            "data_limit_rule": "If Telegram or TDLib omits a metric, say that plainly instead of guessing.",
+            "data_limit_rule": "If Telegram omits a metric, say that plainly instead of guessing.",
             "share_velocity_rule": "Forward velocity requires at least two sync snapshots for the same post.",
         },
         "briefing_contract": {
@@ -526,7 +504,7 @@ def _agent_guided_setup(
             "Move the fix into https://github.com/crimeacs/chappe before the final answer when repo access is available.",
             "Run lint and tests after the repo patch.",
             "Propose a pull request or report the branch/commit that should become one.",
-            "Never include local config, TDLib state, SQLite data, audit logs, credentials, or channel exports in a patch.",
+            "Never include local config, Telethon session files, SQLite data, audit logs, credentials, or channel exports in a patch.",
         ],
         "bug_protocol": [
             "Capture the failing command and the smallest non-secret symptom.",
@@ -598,8 +576,8 @@ def _readiness_summary(
     blockers: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
 
-    if not tdjson_available():
-        blockers.append({"id": "tdjson_missing", "message": "TDLib Python binding is not available."})
+    if not telethon_available():
+        blockers.append({"id": "telethon_missing", "message": "Telethon is not installed."})
     if not cfg.storage.config_path.exists():
         blockers.append({"id": "config_missing", "message": "Run chappe setup to create a config."})
     if not _credentials_present(cfg):
@@ -609,7 +587,7 @@ def _readiness_summary(
     if auth_error:
         warnings.append({"id": "auth_check_failed", "message": str(auth_error.get("message") or auth_error)})
     if auth_state and auth_type != "authorizationStateReady":
-        blockers.append({"id": "auth_not_ready", "message": f"TDLib auth state is {auth_type}."})
+        blockers.append({"id": "auth_not_ready", "message": f"Telethon auth state is {auth_type}."})
     if posts_available == 0:
         warnings.append(
             {
@@ -627,10 +605,9 @@ def _readiness_summary(
 
     score = 0
     score += 10 if cfg.storage.config_path.exists() else 0
-    score += 20 if tdjson_available() else 0
+    score += 20 if telethon_available() else 0
     score += 20 if _credentials_present(cfg) else 0
-    score += 10 if _tdlib_key_present(cfg) else 0
-    score += 20 if auth_type == "authorizationStateReady" else 0
+    score += 30 if auth_type == "authorizationStateReady" else 0
     score += 15 if posts_available > 0 else 0
     score += 5 if comments_available > 0 else 0
 
@@ -738,14 +715,14 @@ def _fastest_path_to_value(
         steps.append(
             {
                 "id": "authenticate",
-                "label": "Authorize TDLib.",
+                "label": "Authorize Telethon.",
                 "commands": [
                     "chappe onboard --check-auth",
                     "chappe auth login --phone +15551234567",
                     "chappe auth login --code <telegram-code>",
                     'chappe auth login --password "<2fa-password-if-needed>"',
                 ],
-                "why": "A ready TDLib session is required before live sync.",
+                "why": "A ready Telethon session is required before live sync.",
             }
         )
 
@@ -811,13 +788,12 @@ def _bootstrap_payload(
             "config_path": str(cfg.storage.config_path),
             "data_dir": str(cfg.storage.data_dir),
             "state_dir": str(cfg.storage.state_dir),
-            "tdlib_dir": str(cfg.storage.tdlib_dir),
+            "session_dir": str(cfg.storage.tdlib_dir),
             "sqlite_path": str(cfg.storage.sqlite_path),
         },
         "telegram": {
-            "tdjson_available": tdjson_available(),
+            "telethon_available": telethon_available(),
             "credentials_present": _credentials_present(cfg),
-            "tdlib_key_present": _tdlib_key_present(cfg),
             "auth_checked": check_auth,
             "auth_state": auth_state,
             "auth_error": auth_error,
@@ -845,9 +821,9 @@ def _onboarding_payload(
 ) -> dict[str, Any]:
     auth_state = None
     auth_error = None
-    if check_auth and _credentials_present(cfg) and tdjson_available():
+    if check_auth and _credentials_present(cfg) and telethon_available():
         try:
-            gateway = TDLibGateway(cfg)
+            gateway = TelegramGateway(cfg)
             auth_state = gateway.authorization_state()
             gateway.close()
         except ChappeError as exc:
@@ -861,9 +837,8 @@ def _onboarding_payload(
         "state": {
             "config_path": str(cfg.storage.config_path),
             "config_exists": cfg.storage.config_path.exists(),
-            "tdjson_available": tdjson_available(),
+            "telethon_available": telethon_available(),
             "credentials_present": _credentials_present(cfg),
-            "tdlib_key_present": _tdlib_key_present(cfg),
             "default_channel": cfg.defaults.default_channel,
             "auth_state": auth_state,
             "auth_error": auth_error,
@@ -910,7 +885,7 @@ def bootstrap(
     ctx: typer.Context,
     channel_arg: Optional[str] = typer.Argument(None, help="Optional channel handle."),
     channel: Optional[str] = typer.Option(None, "--channel", help="Channel to use for the first report."),
-    check_auth: bool = typer.Option(False, "--check-auth", help="Ask TDLib for live auth state."),
+    check_auth: bool = typer.Option(False, "--check-auth", help="Ask Telethon for live auth state."),
 ) -> None:
     """Collect first-run diagnostics and next commands."""
 
@@ -921,7 +896,7 @@ def bootstrap(
 def onboard(
     ctx: typer.Context,
     channel: Optional[str] = typer.Option(None, "--channel", help="Channel to tailor next commands for."),
-    check_auth: bool = typer.Option(False, "--check-auth", help="Ask TDLib for live auth state."),
+    check_auth: bool = typer.Option(False, "--check-auth", help="Ask Telethon for live auth state."),
 ) -> None:
     """Show first-run setup state and next commands."""
 
@@ -934,7 +909,6 @@ def setup(
     api_id: Optional[str] = typer.Option(None, "--api-id", help="Telegram API ID."),
     api_hash: Optional[str] = typer.Option(None, "--api-hash", help="Telegram API hash."),
     channel: Optional[str] = typer.Option(None, "--channel", help="Default channel handle."),
-    tdlib_key: Optional[str] = typer.Option(None, "--tdlib-key", help="Local TDLib DB key."),
     bot_token: Optional[str] = typer.Option(
         None,
         "--bot-token",
@@ -954,7 +928,6 @@ def setup(
         contents = render_config(
             api_id=api_id_value,
             api_hash=api_hash_value,
-            database_encryption_key=tdlib_key,
             default_channel=channel,
             bot_token=bot_token_value,
         )
@@ -977,7 +950,7 @@ def setup(
 
 @app.command()
 def doctor(ctx: typer.Context) -> None:
-    """Check config and TDLib status plus local store health."""
+    """Check config and Telethon status plus local store health."""
 
     def run():
         cfg = _config(ctx)
@@ -996,19 +969,17 @@ def doctor(ctx: typer.Context) -> None:
                 "python": platform.python_version(),
                 "config_path": cfg.storage.config_path,
                 "config_exists": cfg.storage.config_path.exists(),
-                "tdjson_available": tdjson_available(),
+                "telethon_available": telethon_available(),
                 "credentials_present": _credentials_present(cfg),
-                "tdlib_key_present": _tdlib_key_present(cfg),
                 "sqlite_path": cfg.storage.sqlite_path,
                 "store_ok": store_ok,
                 "store_error": store_error,
                 "setup_complete": bool(
                     store_ok
-                    and tdjson_available()
+                    and telethon_available()
                     and cfg.storage.config_path.exists()
                     and cfg.telegram.api_id
                     and cfg.telegram.api_hash
-                    and _tdlib_key_present(cfg)
                 ),
                 "next_commands": _setup_steps(cfg),
             },
@@ -1156,9 +1127,10 @@ def sync(
     def run():
         gateway = _gateway(ctx)
         chat = gateway.resolve_chat(channel)
-        history = gateway.chat_history(chat["id"], limit=limit)
-        messages = history.get("messages", [])
-        posts = [normalize_message(msg, channel=channel, username=chat.get("username")) for msg in messages]
+        history = gateway.chat_history(
+            chat["id"], limit=limit, channel=channel, username=chat.get("username")
+        )
+        posts = history.get("messages", [])
         store = _store(ctx)
         count = store.upsert_posts(channel, posts)
         synced_comments = 0
@@ -1172,16 +1144,15 @@ def sync(
                         chat["id"],
                         post["id"],
                         limit=comment_limit_per_post,
+                        channel=channel,
+                        username=chat.get("username"),
                     )
-                    comment_rows = [
-                        normalize_message(msg, channel=channel, username=chat.get("username"))
-                        for msg in thread.get("messages", [])
-                    ]
-                    synced_comments += store.upsert_comments(channel, str(post["id"]), comment_rows)
+                    synced_comments += store.upsert_comments(
+                        channel, str(post["id"]), thread.get("messages", [])
+                    )
                 except ChappeError as exc:
                     comment_errors.append({"post_id": post["id"], "error": exc.message})
         metric_quality = _sync_metric_quality(
-            messages,
             posts,
             comments_requested=comments,
             synced_comments=synced_comments,
